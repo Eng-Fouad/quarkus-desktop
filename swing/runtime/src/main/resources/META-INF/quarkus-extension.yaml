@@ -1,0 +1,17 @@
+name: "Desktop Swing"
+description: "Build Swing desktop (GUI) applications: components and look and feels, in JVM mode and as native executables"
+artifact: ${project.groupId}:${project.artifactId}:${project.version}
+metadata:
+  short-name: "desktop-swing"
+  keywords:
+    - "desktop"
+    - "swing"
+    - "awt"
+    - "gui"
+    - "native"
+  guide: "https://docs.quarkiverse.io/quarkus-desktop/dev/index.html"
+  categories:
+    - "miscellaneous"
+  status: "experimental"
+  config:
+    - "quarkus.desktop.swing."

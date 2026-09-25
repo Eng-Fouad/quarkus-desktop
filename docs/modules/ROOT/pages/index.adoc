@@ -1,0 +1,81 @@
+= Quarkus Desktop
+
+include::./includes/attributes.adoc[]
+:diataxis-type: reference
+:categories: miscellaneous
+
+:extension-status: experimental
+
+Quarkus Desktop brings AWT and Swing desktop (GUI) applications to Quarkus, in JVM mode and as GraalVM native
+executables.
+
+The Quarkus core extension `io.quarkus:quarkus-awt` supports headless Java2D, ImageIO and fonts, which server side
+applications need. The Quarkus Desktop extensions build on it (they include it) and add what GUI applications need:
+windows, printing, data transfer, input methods, sound, accessibility, and Swing.
+
+TIP: This documentation is a work in progress.
+
+== Installation
+
+Add one of the extensions to your build file. `quarkus-desktop-swing` includes `quarkus-desktop-awt`.
+
+=== AWT
+
+.Maven
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.desktop</groupId>
+    <artifactId>quarkus-desktop-awt</artifactId>
+    <version>{project-version}</version>
+</dependency>
+----
+
+.Gradle
+[source,gradle,subs=attributes+]
+----
+implementation("io.quarkiverse.desktop:quarkus-desktop-awt:{project-version}")
+----
+
+=== Swing
+
+.Maven
+[source,xml,subs=attributes+]
+----
+<dependency>
+    <groupId>io.quarkiverse.desktop</groupId>
+    <artifactId>quarkus-desktop-swing</artifactId>
+    <version>{project-version}</version>
+</dependency>
+----
+
+.Gradle
+[source,gradle,subs=attributes+]
+----
+implementation("io.quarkiverse.desktop:quarkus-desktop-swing:{project-version}")
+----
+
+== Supported platforms
+
+[cols="1,1,1"]
+|===
+|Platform |JVM mode |Native executable
+
+|Windows x64
+|Yes
+|Yes
+
+|Linux x64
+|Yes
+|Yes
+
+|macOS
+|Yes
+|No (GraalVM does not support AWT in native executables on macOS)
+|===
+
+Native executables need GraalVM for JDK 25 and Quarkus {quarkus-version} or later.
+
+== Configuration
+
+See xref:config-reference.adoc[the configuration reference].

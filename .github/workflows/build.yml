@@ -1,0 +1,110 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - '.gitignore'
+      - 'CODEOWNERS'
+      - 'LICENSE'
+      - '*.md'
+      - '*.adoc'
+      - '*.txt'
+      - '.all-contributorsrc'
+      - '.github/project.yml'
+  pull_request:
+    paths-ignore:
+      - '.gitignore'
+      - 'CODEOWNERS'
+      - 'LICENSE'
+      - '*.md'
+      - '*.adoc'
+      - '*.txt'
+      - '.all-contributorsrc'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: JVM - JDK ${{ matrix.java-version }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        java-version: [ 17, 25 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Prepare git
+        run: git config --global core.autocrlf false
+        if: startsWith(matrix.os, 'windows')
+
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+          cache: 'maven'
+
+      # AWT and Swing tests need a display : a virtual X display on Linux
+      - name: Build with Maven (virtual X display)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: xvfb-run -a ./mvnw -B -ntp clean install -Dno-format
+
+      - name: Build with Maven
+        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
+        run: ./mvnw -B -ntp clean install -Dno-format
+
+  native:
+    # macOS is not a native target : GraalVM does not support AWT in native executables on macOS
+    name: Native on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Prepare git
+        run: git config --global core.autocrlf false
+        if: startsWith(matrix.os, 'windows')
+
+      - uses: actions/checkout@v7
+
+      - name: Set up GraalVM for JDK 25
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'maven'
+
+      # The AWT libraries of the native executable are linked dynamically : running it needs the X11, font, sound,
+      # printing and GTK runtime libraries of the host, and a (virtual) X display
+      - name: Install native build and run prerequisites
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential zlib1g-dev xvfb fonts-dejavu-core \
+            libx11-6 libxext6 libxrender1 libxi6 libxtst6 libfreetype6 libfontconfig1 libasound2t64 libcups2t64 \
+            libgtk-3-0t64
+
+      - name: Build native executables and run the integration tests (virtual X display)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: xvfb-run -a ./mvnw -B -ntp clean install -Dnative -Dno-format -Dnative.surefire.skip
+
+      - name: Build native executables and run the integration tests
+        if: ${{ !startsWith(matrix.os, 'ubuntu') }}
+        run: ./mvnw -B -ntp clean install -Dnative -Dno-format -Dnative.surefire.skip

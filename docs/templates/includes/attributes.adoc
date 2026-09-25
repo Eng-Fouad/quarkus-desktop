@@ -1,0 +1,2 @@
+:project-version: ${release.current-version}
+:quarkus-version: ${quarkus.version}

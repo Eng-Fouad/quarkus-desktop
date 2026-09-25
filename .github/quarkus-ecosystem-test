@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+
+# update the versions
+mvn -nsu --settings .github/quarkus-ecosystem-maven-settings.xml -B versions:set-property -Dproperty=quarkus.version -DnewVersion=${QUARKUS_VERSION} -DgenerateBackupPoms=false
+
+# run the tests in JVM mode with a virtual X display (AWT and Swing GUI tests)
+xvfb-run -a mvn -nsu --settings .github/quarkus-ecosystem-maven-settings.xml -B clean install --fail-at-end -e
