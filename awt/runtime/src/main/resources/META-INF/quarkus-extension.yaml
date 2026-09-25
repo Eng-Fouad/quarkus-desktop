@@ -1,0 +1,17 @@
+name: "Desktop AWT"
+description: "Build AWT desktop (GUI) applications: windows, Java2D, fonts, images, printing, clipboard, drag and drop, in JVM mode and as native executables"
+artifact: ${project.groupId}:${project.artifactId}:${project.version}
+metadata:
+  short-name: "desktop-awt"
+  keywords:
+    - "desktop"
+    - "awt"
+    - "gui"
+    - "java2d"
+    - "native"
+  guide: "https://docs.quarkiverse.io/quarkus-desktop/dev/index.html"
+  categories:
+    - "miscellaneous"
+  status: "experimental"
+  config:
+    - "quarkus.desktop.awt."
