@@ -1,0 +1,149 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-windows-dpi-aware]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-windows-dpi-aware[`+++quarkus.desktop.awt.windows.dpi-aware+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.windows.dpi-aware+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the native executable is DPI aware, as a JVM started by the `java` launcher is.
+
+When enabled, the `sun.java2d.dpiaware` system property defaults to `true` in the native executable (a `-Dsun.java2d.dpiaware=false` command line option still overrides it), and the application manifest (see `quarkus.desktop.awt.windows.manifest`) declares per monitor DPI awareness. Windows then lets the application scale itself to the display scale factor (crisp text and images). When disabled, Windows stretches the windows of the application as bitmaps (blurry) on displays with a scale factor above 100 %.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_WINDOWS_DPI_AWARE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_WINDOWS_DPI_AWARE+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-windows-manifest]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-windows-manifest[`+++quarkus.desktop.awt.windows.manifest+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.windows.manifest+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether to embed an application manifest in the native executable, as the `java` launcher has one.
+
+The manifest selects the version 6 of the Windows common controls (the visual styles of the native AWT components and dialogs; without it they look like Windows 2000 controls), declares the DPI awareness of the application (see `quarkus.desktop.awt.windows.dpi-aware`) and the supported Windows versions. It is embedded by the linker, through `-H:NativeLinkerOption` options that the extension adds to the native build.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_WINDOWS_MANIFEST+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_WINDOWS_MANIFEST+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-windows-subsystem]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-windows-subsystem[`+++quarkus.desktop.awt.windows.subsystem+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.windows.subsystem+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The Windows subsystem of the native executable.
+
+`console`, the default, is the subsystem of the `java` launcher : started from Explorer, the application gets a console window, which shows its log. `windows` is the subsystem of the `javaw` launcher : no console window (the standard output and error streams of the application are lost unless they are redirected, so configure a log file).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_WINDOWS_SUBSYSTEM+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_WINDOWS_SUBSYSTEM+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`console`, `windows`
+|`+++console+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-windows-copy-vc-runtime]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-windows-copy-vc-runtime[`+++quarkus.desktop.awt.windows.copy-vc-runtime+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.windows.copy-vc-runtime+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether to copy the Microsoft Visual C{plus}{plus} runtime libraries (`msvcp140.dll`, `vcruntime140.dll` and `vcruntime140_1.dll`) of the GraalVM used for the native build next to the native executable, when the native executable uses the AWT libraries.
+
+The JDK AWT library `awt.dll` needs `msvcp140.dll`, which a Windows installation does not always have (it comes with the Visual C{plus}{plus} Redistributable). With a local copy, the native executable and its libraries can be distributed as they are, as the JDK does.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_WINDOWS_COPY_VC_RUNTIME+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_WINDOWS_COPY_VC_RUNTIME+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-windows-access-bridge]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-windows-access-bridge[`+++quarkus.desktop.awt.windows.access-bridge+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.windows.access-bridge+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the native executable supports the Java Access Bridge, which screen readers such as JAWS or NVDA use to access the user interface of Java applications.
+
+Users enable the Java Access Bridge with `jabswitch -enable` (or in the Windows accessibility settings), which configures the `assistive_technologies` of every Java application in `%USERPROFILE%++\++.accessibility.properties`. When enabled, the Java Access Bridge is included in the native executable, as it is in the JDK (`javaaccessbridge.dll` and `jawt.dll` are copied next to the native executable), and it is loaded when the user enabled it. When disabled, the `javax.accessibility.assistive_technologies` system property defaults to an empty value in the native executable, so that the native executable ignores the user setting, instead of failing to start with a `java.awt.AWTError: Could not load or activate service provider`.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_WINDOWS_ACCESS_BRIDGE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_WINDOWS_ACCESS_BRIDGE+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-windows-font-configuration]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-windows-font-configuration[`+++quarkus.desktop.awt.windows.font-configuration+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.windows.font-configuration+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The logical font configuration (the physical fonts behind the `Dialog`, `SansSerif`, `Serif`, `Monospaced` and `DialogInput` logical fonts, used by AWT components and by default in Swing).
+
+`jdk`, the default, is the font configuration of the JDK used for the native build (its `lib/fontconfig.properties.src` file, embedded in the native executable and extracted to the temporary directory at startup) : the logical fonts display the same scripts as in JVM mode (Arabic, Hebrew, Chinese, Japanese, Korean, Thai, Indic scripts...), and all the charsets of the JDK are included in the native executable, since the font configuration uses many of them. `minimal` is the minimal font configuration of the Quarkus AWT extension (Latin scripts only) : a slightly smaller native executable.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_WINDOWS_FONT_CONFIGURATION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_WINDOWS_FONT_CONFIGURATION+++`
+endif::add-copy-button-to-env-var[]
+--
+a|`jdk`, `minimal`
+|`+++jdk+++`
+
+|===
+

@@ -76,6 +76,10 @@ implementation("io.quarkiverse.desktop:quarkus-desktop-swing:{project-version}")
 
 Native executables need GraalVM for JDK 25 and Quarkus {quarkus-version} or later.
 
+== Guides
+
+* xref:awt.adoc[Desktop AWT]: how the extensions work, writing a desktop application, and building native executables.
+
 == Configuration
 
 See xref:config-reference.adoc[the configuration reference].
