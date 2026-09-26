@@ -687,6 +687,10 @@ public final class AwtClassesAndResources {
             "java.lang.Thread#currentThread()",
             "java.util.ArrayList#<init>(int)",
             "java.util.ArrayList#add(java.lang.Object)",
+
+            // Java2D pipes : the native span filler flushes the render queue (Direct3D, OpenGL) when it is full. The
+            // method is inherited : the registration of the render queue classes does not cover it
+            "sun.java2d.pipe.RenderQueue#flushNow(int)",
     };
 
     static String[] WINDOWS_JNI_RUNTIME_ACCESS_METHODS = {

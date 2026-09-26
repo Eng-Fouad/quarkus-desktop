@@ -30,6 +30,7 @@ import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildIt
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.deployment.IsDevelopment;
+import io.quarkus.deployment.IsNormal;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -331,7 +332,8 @@ class DesktopAwtProcessor {
     ServiceStartBuildItem runtimeHome(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config,
             NativeConfig nativeConfig, DesktopAwtRecorder recorder,
             BuildProducer<GeneratedResourceBuildItem> generatedResources,
-            BuildProducer<NativeImageResourceBuildItem> resources) {
+            BuildProducer<NativeImageResourceBuildItem> resources,
+            BuildProducer<DesktopAwtRuntimeInitBuildItem> runtimeInit) {
         Path jdkHome = builderJdkHome(nativeConfig);
         embed(jdkHome.resolve("lib").resolve("psfontj2d.properties"), DesktopAwtRecorder.POSTSCRIPT_FONTS,
                 generatedResources, resources);
@@ -343,8 +345,10 @@ class DesktopAwtProcessor {
                 fontConfiguration = "quarkus-desktop-awt-fonts-" + sha256(data).substring(0, 16);
             }
         }
-        // Before the application starts, so before any AWT class is used
+        // Before the application starts, so before any AWT class is used : the other steps that use AWT at startup
+        // consume DesktopAwtRuntimeInitBuildItem
         recorder.initRuntimeHome(fontConfiguration);
+        runtimeInit.produce(new DesktopAwtRuntimeInitBuildItem());
         return new ServiceStartBuildItem(FEATURE);
     }
 
@@ -447,6 +451,19 @@ class DesktopAwtProcessor {
     @Record(ExecutionTime.RUNTIME_INIT)
     void disposeWindowsOnRestart(DesktopAwtRecorder recorder, ShutdownContextBuildItem shutdownContext) {
         recorder.disposeWindowsOnShutdown(shutdownContext);
+    }
+
+    /**
+     * The AWT event dispatch thread outlives the application in dev mode (live reload) and in tests (several
+     * applications in the same JVM), with the context class loader of the first application : dispatch the events with
+     * the class loader of the running application, so that the classes that Swing loads by name on the event dispatch
+     * thread (look and feels, editor kits...) are the application ones.
+     */
+    @BuildStep(onlyIfNot = IsNormal.class)
+    @Record(ExecutionTime.RUNTIME_INIT)
+    void applicationClassLoaderOnEventDispatchThread(DesktopAwtRecorder recorder,
+            ShutdownContextBuildItem shutdownContext) {
+        recorder.useApplicationClassLoaderOnEventDispatchThread(shutdownContext);
     }
 
     /**

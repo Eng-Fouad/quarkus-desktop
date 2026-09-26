@@ -1,0 +1,61 @@
+[.configuration-legend]
+icon:lock[title=Fixed at build time] Configuration property fixed at build time - All other configuration properties are overridable at runtime
+[.configuration-reference.searchable, cols="80,.^10,.^10"]
+|===
+
+h|[.header-title]##Configuration property##
+h|Type
+h|Default
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-swing_quarkus-desktop-swing-included-look-and-feels]] [.property-path]##link:#quarkus-desktop-swing_quarkus-desktop-swing-included-look-and-feels[`+++quarkus.desktop.swing.included-look-and-feels+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.swing.included-look-and-feels+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The look and feels of the JDK included in native executables : `all`, or a list of `metal`, `nimbus`, `synth`, `motif`, `windows` (with Windows Classic), `gtk` and `multi` (the multiplexing look and feel of the auxiliary look and feels).
+
+By default, native executables include all the look and feels of the JDK for their platform. They make the native executable larger (about 10 MB for all of them : Nimbus and the multiplexing look and feel about 3 MB each), so an application can list only those it uses. Metal, the default look and feel, is always included; Nimbus and GTK include the Synth look and feel they extend, but not the loading of Synth XML files (`synth`). Setting a look and feel that is not included fails with a `ClassNotFoundException`.
+
+This property has no effect in JVM mode.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_SWING_INCLUDED_LOOK_AND_FEELS+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_SWING_INCLUDED_LOOK_AND_FEELS+++`
+endif::add-copy-button-to-env-var[]
+--
+a|list of `all`, `metal`, `nimbus`, `synth`, `motif`, `windows`, `gtk`, `multi`
+|`+++all+++`
+
+a| [[quarkus-desktop-swing_quarkus-desktop-swing-look-and-feel]] [.property-path]##link:#quarkus-desktop-swing_quarkus-desktop-swing-look-and-feel[`+++quarkus.desktop.swing.look-and-feel+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.swing.look-and-feel+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The look and feel set when the application starts, before it runs (on the event dispatch thread, in JVM mode and in native executables).
+
+`system` (the look and feel of the platform : Windows on Windows, GTK on a GNOME desktop, Metal otherwise), `cross-platform` (Metal), `metal`, `nimbus`, `motif`, `windows`, `windows-classic`, `gtk`, or the class name of a look and feel (an application look and feel, or a library one such as FlatLaf). When not set, Swing uses its default look and feel (Metal, unless the `swing.defaultlaf` system property sets another one), and the application can set the look and feel itself with `UIManager.setLookAndFeel`.
+
+A look and feel that this platform does not support (for instance `windows` on Linux) or that cannot be created is reported as a warning, and the default look and feel is kept. The look and feel classes of the JDK are always included in native executables; an application look and feel class is registered for reflection when it is in the Jandex index of the application, or when this property names it at build time.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_SWING_LOOK_AND_FEEL+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_SWING_LOOK_AND_FEEL+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+|===
+

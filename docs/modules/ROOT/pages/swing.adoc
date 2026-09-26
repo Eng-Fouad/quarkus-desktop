@@ -1,0 +1,233 @@
+= Desktop Swing
+
+include::./includes/attributes.adoc[]
+:diataxis-type: reference
+:categories: miscellaneous
+
+The `quarkus-desktop-swing` extension makes Swing applications work in JVM mode and as GraalVM native executables: all
+the components, all the look and feels of the JDK (Metal with its themes, Nimbus, Synth, Windows and Windows Classic,
+GTK, CDE/Motif, and the multiplexing look and feel), text (HTML, RTF, styled text), formatters and editors, the file and
+color choosers, option panes, internal frames, data transfer, printing, and application look and feels and UI
+delegates.
+
+It includes `quarkus-desktop-awt`: see xref:awt.adoc[Desktop AWT] for what AWT applications need (windows, fonts, native
+executables on Windows and Linux, HiDPI displays...). Everything written there applies to Swing applications.
+
+== How it works
+
+In JVM mode, Swing needs nothing special. The extension sets the configured look and feel at startup (see
+<<look-and-feel>>).
+
+Swing creates many of its classes by name, with reflection: the look and feels and their UI delegates, the Nimbus
+painters, the key bindings, the editor kits, the values that formatters and table editors parse... For native
+executables, the extension registers what the JDK needs on the platform of the executable (Windows or Linux), and what
+the application needs:
+
+* The look and feels of the JDK, their UI delegates, painters, lazy values, icons, sounds and resource bundles.
+* Text: the HTML and RTF editor kits, the RTF charsets, the page content types (`JEditorPane.setPage`).
+* The `String` constructors of the JDK value types (`Integer`, `Long`, `Short`, `Byte`, `Float`, `Double`, `Boolean`,
+`BigDecimal`, `BigInteger`, `Date`) that `JFormattedTextField` formatters and the `JTable` editors use to parse text, and
+their `valueOf(String)` methods that editable combo boxes use.
+* The bean properties of the components that are usually transferred with `new TransferHandler("text")`: `text`,
+`icon`, `color`, `value`, `selected`, `selectedItem`, `selectedIndex`, `toolTipText`, and the properties of
+`java.awt.Component` (`background`, `foreground`, `font`, `enabled`, `visible`, `focusable`, `name`).
+* The Synth XML support: the beans decoder that creates the objects of the XML files.
+* The *application classes* that Swing creates by name or inspects with reflection, found in the Jandex index: UI
+delegates (`ComponentUI` subclasses, with their static `createUI` method), look and feels (`LookAndFeel` subclasses),
+editor kits (`EditorKit` subclasses), Synth painters (`SynthPainter` subclasses), plain text views (`PlainView`
+subclasses, whose overridden drawing methods Swing looks up) and text components that handle input method events.
+* The classes named in the Synth XML files of the application (`<object class="...">`).
+* The look and feel class set with `quarkus.desktop.swing.look-and-feel`, when it is a class name.
+
+The parts of Swing that AWT itself uses (print dialogs, input method windows, the text components of AWT on Linux)
+come with `quarkus-desktop-awt`: the run time initialization of the Swing packages, the basic and Metal UI delegates and
+their key bindings, the basic and Metal icons, HTML text. A Swing application class whose static initializer creates
+Swing objects (`static final Border`, `static final Icon`, `static final Color`...) is initialized at run time, as in JVM
+mode.
+
+== Writing a Swing application
+
+Create the user interface on the event dispatch thread, and stop Quarkus when the main window closes:
+
+[source,java]
+----
+@QuarkusMain
+public class Main implements QuarkusApplication {
+
+    @Override
+    public int run(String... args) throws Exception {
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Hello");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    Quarkus.asyncExit();
+                }
+            });
+            frame.add(new JLabel("Hello from Quarkus"));
+            frame.pack();
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+        Quarkus.waitForExit();
+        return 0;
+    }
+}
+----
+
+Swing components can be CDI beans: make them `@Singleton` or `@Dependent` beans (see
+xref:awt.adoc#_cdi_beans[CDI beans]), and create them on the event dispatch thread.
+
+[[look-and-feel]]
+== Look and feel
+
+Set the look and feel in `application.properties`:
+
+[source,properties]
+----
+quarkus.desktop.swing.look-and-feel=system
+----
+
+It is set on the event dispatch thread when the application starts, before it runs. The value is `system` (the look and
+feel of the platform), `cross-platform` (Metal), `metal`, `nimbus`, `motif`, `windows`, `windows-classic`, `gtk`, or a
+class name. The application can also set the look and feel itself with `UIManager.setLookAndFeel`, as usual.
+
+[cols="2,1,1,3"]
+|===
+|Look and feel |Windows |Linux |Notes
+
+|Metal (`cross-platform`), with the Ocean (default) and Steel themes, and application themes
+|Yes
+|Yes
+|The default look and feel.
+
+|Nimbus
+|Yes
+|Yes
+|
+
+|Synth
+|Yes
+|Yes
+|Loaded from an XML file, see <<synth>>.
+
+|Windows (`system` on Windows), Windows Classic
+|Yes
+|No
+|Uses the visual styles (themes) of Windows, and the shell icons.
+
+|GTK (`system` on a GNOME desktop)
+|No
+|Yes
+|Needs GTK 3 (`libgtk-3-0t64` on Ubuntu 24.04). The system look and feel is GTK when the desktop is GNOME
+(`XDG_CURRENT_DESKTOP`), Metal otherwise.
+
+|CDE/Motif
+|Yes
+|Yes
+|
+
+|Multiplexing (auxiliary look and feels, `UIManager.addAuxiliaryLookAndFeel`)
+|Yes
+|Yes
+|
+|===
+
+=== Native executable size
+
+Native executables include all the look and feels of the JDK for their platform: about 10 MB of a native executable
+(Nimbus and the multiplexing look and feel are the largest ones). An application that uses some of them only can list
+them, for instance for an application that uses the system look and feel of Windows:
+
+[source,properties]
+----
+quarkus.desktop.swing.included-look-and-feels=metal,windows
+----
+
+Metal (the default look and feel) is always included. For a trivial Swing application on Windows, the native
+executable is 99 MB with all the look and feels, and 88.5 MB with Metal only. Setting a look and feel that is not
+included fails with a `ClassNotFoundException`, and the build logs a warning when `quarkus.desktop.swing.look-and-feel`
+names one.
+
+=== Application and library look and feels
+
+Application look and feels, themes and UI delegates work as in JVM mode when their classes are in the Jandex index of
+the application (the classes of the application are). A library look and feel (for instance FlatLaf) needs its own
+native image metadata: some libraries include it, otherwise register the classes it creates by name, for instance with
+`@RegisterForReflection(targets = ...)`, or index the library with `quarkus.index-dependency`.
+
+[[synth]]
+=== Synth
+
+`SynthLookAndFeel.load(InputStream, Class)` and `load(URL)` work in native executables:
+
+* Include the XML file and the images it references in the native executable:
+`quarkus.native.resources.includes=com/example/laf/**`. Paths in the XML file are relative to the package of the class
+given to `load` (the resource base).
+* The classes of the objects that the XML file creates (`<object class="...">`, for instance a painter or a
+`ColorUIResource`) are registered for reflection by the extension, which reads the Synth XML files of the application
+(the XML files with a `<synth>` root element).
+
+== Text
+
+`JEditorPane`, `JTextPane` and the other text components work as in JVM mode: the HTML editor kit (CSS, tables, lists,
+forms, images), the RTF editor kit (reading and writing, with the RTF charsets), styled text, undo and redo, and the
+application editor kits registered by class name (`JEditorPane.registerEditorKitForContentType`).
+
+In a native executable, class path resources have `resource:` URLs (`jar:` or `file:` URLs in JVM mode):
+`JEditorPane.setPage(getClass().getResource("page.html"))`, `new ImageIcon(getClass().getResource("icon.png"))` and
+the images of HTML pages work with them. Include the resources of the application in the native executable with
+`quarkus.native.resources.includes`.
+
+`JFormattedTextField` formatters (`DefaultFormatter`, `NumberFormatter`, `InternationalFormatter`) and the `JTable`
+editors create the values from text with the `String` constructor of their class: the JDK types listed in
+<<_how_it_works>> are registered. Register the application value classes that use a formatter or a table editor for
+reflection (`@RegisterForReflection`).
+
+== Data transfer
+
+Clipboard and drag and drop of text, images and files work as in AWT. A `TransferHandler` created with a property name
+(`new TransferHandler("text")`) reads and writes the property with the bean introspector: the usual properties of the
+components are registered (see <<_how_it_works>>). Register the accessors of other properties for reflection.
+
+== Printing
+
+`JTable.print`, `JTextComponent.print` (text, HTML, RTF) and the `Printable` objects of `JTable.getPrintable` and
+`JTextComponent.getPrintable` print as in JVM mode, to printers or to a `StreamPrintService` (PostScript). The print
+and page dialogs are the ones of AWT: native dialogs on Windows, Swing dialogs (`ServiceDialog`) on Linux.
+
+== Locales
+
+The texts of Swing (the buttons of the option panes, the file and color choosers...) come from resource bundles. A
+native executable includes the locales of the application: set `quarkus.locales` (and `quarkus.default-locale`). The
+JDK translates Swing to German, Japanese and Simplified Chinese on Windows, and to more languages on Linux; the other
+languages get English texts.
+
+== Dev mode
+
+In dev mode (and in tests running several applications in the same JVM), the AWT event dispatch thread outlives the
+application. The Desktop AWT extension makes it dispatch the events with the class loader of the running application,
+so that the classes that Swing loads by name on the event dispatch thread (look and feels, UI delegates, editor kits)
+are the ones of the running application after a live reload. Global Swing state stays from one run to the next (the
+look and feel, `UIManager.put` values): set it when the application starts.
+
+== Limitations
+
+* `DefaultFormatter` and the `JTable` editors of application value classes, the properties of a `TransferHandler`
+other than the registered ones, third party look and feels and objects created by name (`UIDefaults.ProxyLazyValue`,
+`java.beans.XMLDecoder` documents, HTML `<object>` elements with `swing.html.object=true`) need their own native image
+metadata, for instance with `@RegisterForReflection`.
+* The native image tracing agent gives the metadata that an application needs:
+`java -agentlib:native-image-agent=config-output-dir=src/main/resources/META-INF/native-image/<group>/<artifact> -jar target/quarkus-app/quarkus-run.jar`.
+
+== Verification
+
+The integration tests of the extension run a gallery of the components with every look and feel of the platform (in JVM
+mode and as a native executable, on Windows and on Linux), and check that the native executable gets the same look and
+feel defaults (UI delegates, icons, painters, borders, colors, fonts, texts), the same key bindings, the same font
+metrics, the same rendering (pixel by pixel) and the same PostScript output as JVM mode.
+
+== Configuration
+
+include::includes/quarkus-desktop-swing.adoc[leveloffset=+1, opts=optional]

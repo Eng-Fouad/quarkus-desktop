@@ -14,7 +14,7 @@ Quarkus extensions to build AWT and Swing desktop (GUI) applications, in JVM mod
 | Extension | Coordinates | Description |
 |---|---|---|
 | Desktop AWT | `io.quarkiverse.desktop:quarkus-desktop-awt` | AWT windows, Java2D, fonts, images, printing, clipboard, drag and drop |
-| Desktop Swing | `io.quarkiverse.desktop:quarkus-desktop-swing` | Swing components and look and feels (includes Desktop AWT) |
+| Desktop Swing | `io.quarkiverse.desktop:quarkus-desktop-swing` | Swing components, the look and feels of the JDK (Metal, Nimbus, Synth, Windows, GTK, Motif), text, printing (includes Desktop AWT) |
 
 Please refer to the documentation available at https://docs.quarkiverse.io/quarkus-desktop/dev/index.html
 
