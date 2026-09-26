@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.URI;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,6 +55,9 @@ class SwingClassesAndResourcesTest {
             Map.entry("REFLECTIVE_CLASSES", TYPE_ENTRY),
             Map.entry("REFLECTIVE_CONSTRUCTORS", TYPE_ENTRY),
             Map.entry("REFLECTIVE_METHODS", METHOD_ENTRY),
+            Map.entry("REFLECTIVE_FIELDS", FIELD_ENTRY),
+            Map.entry("REFLECTIVE_PUBLIC_MEMBERS", NAME_ENTRY),
+            Map.entry("JAVA_BEANS_CLASSES", NAME_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_CLASSES", NAME_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_METHODS", METHOD_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_FIELDS", FIELD_ENTRY),
@@ -214,6 +218,23 @@ class SwingClassesAndResourcesTest {
                 try {
                     type(entry);
                 } catch (ClassNotFoundException e) {
+                    // a resource bundle is a class or a properties file of a JDK module
+                    if (!kind.equals("RESOURCE_BUNDLES") || !jdkResourceExists(entry.replace('.', '/') + ".properties")) {
+                        errors.add(kind + " : class not found " + entry);
+                    }
+                }
+            }
+        }
+        // only the public members of these classes are registered : they are public classes
+        for (String kind : List.of("REFLECTIVE_PUBLIC_MEMBERS", "JAVA_BEANS_CLASSES")) {
+            for (String entry : entries(kind, platform)) {
+                try {
+                    for (Class<?> type = type(entry); type != null; type = type.getDeclaringClass()) {
+                        if (!Modifier.isPublic(type.getModifiers())) {
+                            errors.add(kind + " : not a public class " + entry);
+                        }
+                    }
+                } catch (ClassNotFoundException e) {
                     errors.add(kind + " : class not found " + entry);
                 }
             }
@@ -237,12 +258,14 @@ class SwingClassesAndResourcesTest {
                 }
             }
         }
-        for (String entry : entries("JNI_RUNTIME_ACCESS_FIELDS", platform)) {
-            MemberEntry field = MemberEntry.field(entry);
-            try {
-                type(field.className()).getDeclaredField(field.name());
-            } catch (ReflectiveOperationException e) {
-                errors.add("JNI_RUNTIME_ACCESS_FIELDS : not found " + entry);
+        for (String kind : List.of("REFLECTIVE_FIELDS", "JNI_RUNTIME_ACCESS_FIELDS")) {
+            for (String entry : entries(kind, platform)) {
+                MemberEntry field = MemberEntry.field(entry);
+                try {
+                    type(field.className()).getDeclaredField(field.name());
+                } catch (ReflectiveOperationException e) {
+                    errors.add(kind + " : not found " + entry);
+                }
             }
         }
         assertTrue(errors.isEmpty(), String.join("\n", errors));
@@ -258,6 +281,16 @@ class SwingClassesAndResourcesTest {
             }
         }
         return entries;
+    }
+
+    /**
+     * Whether a resource exists in a module of the JDK running the tests (the resources of the packages of a module that
+     * are not open cannot be read with a class loader).
+     */
+    private static boolean jdkResourceExists(String path) {
+        FileSystem jrt = FileSystems.getFileSystem(URI.create("jrt:/"));
+        return ModuleLayer.boot().modules().stream()
+                .anyMatch(module -> Files.exists(jrt.getPath("/modules", module.getName(), path)));
     }
 
     private static Class<?> type(String name) throws ClassNotFoundException {

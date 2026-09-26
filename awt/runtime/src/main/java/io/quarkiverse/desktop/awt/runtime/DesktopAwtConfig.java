@@ -21,6 +21,46 @@ public interface DesktopAwtConfig {
     Windows windows();
 
     /**
+     * The JavaBeans API in native executables.
+     */
+    JavaBeans javaBeans();
+
+    /**
+     * The JavaBeans API ({@code java.beans}) in native executables.
+     * <p>
+     * The JavaBeans API reads classes with reflection. Native executables always support its core : the property
+     * editors of the JDK ({@code PropertyEditorManager}), the bean info of {@code java.awt.Component}, {@code XMLEncoder}
+     * and {@code XMLDecoder} with the persistence delegates of the JDK, the JDK collections, dates and
+     * {@code java.lang} values, {@code EventHandler} with property change events. The application registers its own
+     * classes, for instance with {@code @RegisterForReflection}.
+     */
+    interface JavaBeans {
+
+        /**
+         * Whether the JDK AWT classes support the JavaBeans API in native executables : their public constructors,
+         * methods and fields are registered for reflection, so that the {@code Introspector} finds their bean properties
+         * and event sets, and that {@code XMLEncoder}, {@code XMLDecoder}, {@code Statement}, {@code Expression},
+         * {@code EventHandler} and {@code Beans.instantiate} work with them, as in JVM mode.
+         * <p>
+         * The classes are the AWT components and menu components, the layouts ({@code GridBagConstraints} included),
+         * the values of their properties ({@code Color}, {@code Font}, {@code Insets}, {@code Point},
+         * {@code Rectangle}, {@code Cursor}, {@code MenuShortcut}...), the AWT events, listeners and adapters. For
+         * instance {@code Introspector.getBeanInfo(Button.class)} finds the {@code label} property,
+         * {@code XMLEncoder} writes a {@code Panel} with its layout and components, and
+         * {@code EventHandler.create(ActionListener.class, target, "text", "source.label")} reads the label of the
+         * source of an {@code ActionEvent}.
+         * <p>
+         * It makes a native executable about 0.3 MB larger. When disabled, the {@code Introspector} finds no bean
+         * property of these classes (other than those that the extensions register for their own needs) and
+         * {@code XMLEncoder} cannot write them. The same property of the Desktop Swing extension,
+         * {@code quarkus.desktop.swing.java-beans.jdk-classes} (disabled by default), registers the Swing classes, and
+         * the AWT classes that they extend whatever the value of this property.
+         */
+        @WithDefault("true")
+        boolean jdkClasses();
+    }
+
+    /**
      * Native executables built for Windows (a native build on a Windows host, not a container build).
      */
     interface Windows {

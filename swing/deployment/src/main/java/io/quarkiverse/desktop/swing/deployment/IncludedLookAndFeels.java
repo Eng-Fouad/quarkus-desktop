@@ -28,8 +28,9 @@ final class IncludedLookAndFeels {
      */
     private static final Map<IncludedLookAndFeel, List<String>> PREFIXES = Map.of(
             NIMBUS, List.of("javax.swing.plaf.nimbus."),
-            // The loading of Synth XML files : the beans decoder, the color types by name
-            SYNTH, List.of("com.sun.beans.decoder.", "javax.swing.plaf.synth.ColorType", "java.lang.Class#newInstance()"),
+            // The loading of Synth XML files : the color types by name (the Desktop AWT extension registers the beans
+            // decoder, which XMLDecoder uses too)
+            SYNTH, List.of("javax.swing.plaf.synth.ColorType"),
             MOTIF, List.of("com.sun.java.swing.plaf.motif.", "com/sun/java/swing/plaf/motif/"),
             WINDOWS, List.of("com.sun.java.swing.plaf.windows.", "com/sun/java/swing/plaf/windows/"),
             GTK, List.of("com.sun.java.swing.plaf.gtk.", "com/sun/java/swing/plaf/gtk/"),

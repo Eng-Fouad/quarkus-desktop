@@ -33,6 +33,13 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * <li>{@code REFLECTIVE_CONSTRUCTORS} : classes registered for reflection with their constructors (also used for
  * classes that are only looked up by name; array classes are allowed).</li>
  * <li>{@code REFLECTIVE_METHODS} : single methods registered for reflection, {@code "fqcn#name(paramType,...)"}.</li>
+ * <li>{@code REFLECTIVE_FIELDS} : single fields registered for reflection, {@code "fqcn#field"}.</li>
+ * <li>{@code REFLECTIVE_PUBLIC_MEMBERS} : classes registered for reflection with their public constructors, public
+ * methods (inherited ones included) and public fields (what the JavaBeans API uses).</li>
+ * <li>{@code JAVA_BEANS_CLASSES} : JDK classes registered as {@code REFLECTIVE_PUBLIC_MEMBERS} when
+ * {@code quarkus.desktop.swing.java-beans.jdk-classes} is enabled : the bean properties, event sets and public fields
+ * of the Swing components, models, borders, events and listeners, text components and documents, for the JavaBeans
+ * API.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_CLASSES} : classes reached from native code, with all their constructors, methods and
  * fields.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_METHODS} : single methods or constructors reached from native code,
@@ -111,9 +118,8 @@ public final class SwingClassesAndResources {
     };
 
     static String[] REFLECTIVE_CONSTRUCTORS = {
-            // bean properties (TransferHandler) : the bean info of java.awt.Component, found by the Introspector, and the
-            // listener arrays of the event sets of the components
-            "com.sun.beans.infos.ComponentBeanInfo",
+            // bean properties (TransferHandler) : the listener arrays of the event sets of the components (the Desktop AWT
+            // extension registers the bean info of java.awt.Component)
             "java.awt.event.ActionListener[]",
             "java.awt.event.ItemListener[]",
             "java.awt.event.MouseMotionListener[]",
@@ -229,30 +235,6 @@ public final class SwingClassesAndResources {
             "javax.swing.plaf.nimbus.TreeCellPainter",
             "javax.swing.plaf.nimbus.TreePainter",
 
-            // Synth : element handlers of the beans decoder (the objects of the XML files; also java.beans.XMLDecoder)
-            "com.sun.beans.decoder.ArrayElementHandler",
-            "com.sun.beans.decoder.BooleanElementHandler",
-            "com.sun.beans.decoder.ByteElementHandler",
-            "com.sun.beans.decoder.CharElementHandler",
-            "com.sun.beans.decoder.ClassElementHandler",
-            "com.sun.beans.decoder.DoubleElementHandler",
-            "com.sun.beans.decoder.FalseElementHandler",
-            "com.sun.beans.decoder.FieldElementHandler",
-            "com.sun.beans.decoder.FloatElementHandler",
-            "com.sun.beans.decoder.IntElementHandler",
-            "com.sun.beans.decoder.JavaElementHandler",
-            "com.sun.beans.decoder.LongElementHandler",
-            "com.sun.beans.decoder.MethodElementHandler",
-            "com.sun.beans.decoder.NewElementHandler",
-            "com.sun.beans.decoder.NullElementHandler",
-            "com.sun.beans.decoder.ObjectElementHandler",
-            "com.sun.beans.decoder.PropertyElementHandler",
-            "com.sun.beans.decoder.ShortElementHandler",
-            "com.sun.beans.decoder.StringElementHandler",
-            "com.sun.beans.decoder.TrueElementHandler",
-            "com.sun.beans.decoder.VarElementHandler",
-            "com.sun.beans.decoder.VoidElementHandler",
-
             // text : editor kits by content type (JEditorPane)
             "javax.swing.JEditorPane$PlainEditorKit",
             "javax.swing.text.html.HTMLEditorKit",
@@ -277,23 +259,9 @@ public final class SwingClassesAndResources {
     };
 
     static String[] REFLECTIVE_METHODS = {
-            // bean properties (new TransferHandler("text")...) : the Introspector only sees the registered accessors.
-            // Those of java.awt.Component are the properties of its bean info (all required), the others are the
-            // properties usually transferred
-            "java.awt.Component#getBackground()",
-            "java.awt.Component#getFont()",
-            "java.awt.Component#getForeground()",
-            "java.awt.Component#getName()",
-            "java.awt.Component#isEnabled()",
-            "java.awt.Component#isFocusable()",
-            "java.awt.Component#isVisible()",
-            "java.awt.Component#setBackground(java.awt.Color)",
-            "java.awt.Component#setEnabled(boolean)",
-            "java.awt.Component#setFocusable(boolean)",
-            "java.awt.Component#setFont(java.awt.Font)",
-            "java.awt.Component#setForeground(java.awt.Color)",
-            "java.awt.Component#setName(java.lang.String)",
-            "java.awt.Component#setVisible(boolean)",
+            // bean properties (new TransferHandler("text")...) : the Introspector only sees the registered accessors : the
+            // properties usually transferred (the Desktop AWT extension registers those of java.awt.Component, the
+            // properties of its bean info)
             "javax.swing.AbstractButton#getIcon()",
             "javax.swing.AbstractButton#getText()",
             "javax.swing.AbstractButton#isSelected()",
@@ -337,14 +305,8 @@ public final class SwingClassesAndResources {
             "javax.swing.text.JTextComponent#setText(java.lang.String)",
 
             // formatters (DefaultFormatter, NumberFormatter) and table editors (JTable.GenericEditor) : values created
-            // from text with the String constructor of their class
-            "java.lang.Boolean#<init>(java.lang.String)",
-            "java.lang.Byte#<init>(java.lang.String)",
-            "java.lang.Double#<init>(java.lang.String)",
-            "java.lang.Float#<init>(java.lang.String)",
-            "java.lang.Integer#<init>(java.lang.String)",
-            "java.lang.Long#<init>(java.lang.String)",
-            "java.lang.Short#<init>(java.lang.String)",
+            // from text with the String constructor of their class (the Desktop AWT extension registers those of the
+            // java.lang wrappers, for XMLEncoder)
             "java.math.BigDecimal#<init>(java.lang.String)",
             "java.math.BigInteger#<init>(java.lang.String)",
             "java.util.Date#<init>(java.lang.String)",
@@ -396,9 +358,6 @@ public final class SwingClassesAndResources {
 
             // Synth look and feels (Synth, Nimbus, GTK) : SynthLookAndFeel creates their UI delegates
             "javax.swing.plaf.synth.SynthLookAndFeel#createUI(javax.swing.JComponent)",
-
-            // Synth : objects of the XML files without arguments (created with Class.newInstance by the beans decoder)
-            "java.lang.Class#newInstance()",
     };
 
     static String[] WINDOWS_REFLECTIVE_METHODS = {
@@ -498,6 +457,380 @@ public final class SwingClassesAndResources {
             "com.sun.java.swing.plaf.gtk.GTKPainter$ListTableFocusBorder#getSelectedCellBorder()",
             "com.sun.java.swing.plaf.gtk.GTKPainter$ListTableFocusBorder#getUnselectedCellBorder()",
             "com.sun.java.swing.plaf.gtk.Metacity#getTitlePaneLayout()",
+    };
+
+    static String[] REFLECTIVE_FIELDS = {
+    };
+
+    static String[] WINDOWS_REFLECTIVE_FIELDS = {
+    };
+
+    static String[] LINUX_REFLECTIVE_FIELDS = {
+    };
+
+    static String[] REFLECTIVE_PUBLIC_MEMBERS = {
+            // JavaBeans : the key strokes of the Swing properties (accelerators, input maps), which XMLEncoder writes with
+            // their factory methods (the AWTKeyStroke persistence delegate)
+            "javax.swing.KeyStroke",
+    };
+
+    static String[] WINDOWS_REFLECTIVE_PUBLIC_MEMBERS = {
+    };
+
+    static String[] LINUX_REFLECTIVE_PUBLIC_MEMBERS = {
+    };
+
+    // ---------------------------------------------------------------------------------------------------- JavaBeans
+    // The bean properties, event sets and public fields of the Swing classes, for the Introspector, XMLEncoder and
+    // XMLDecoder, Statement, Expression, EventHandler and Beans.instantiate : registered with their public constructors,
+    // methods and fields when quarkus.desktop.swing.java-beans.jdk-classes is enabled (with the AWT classes that they
+    // extend, see AwtClassesAndResources.JAVA_BEANS_CLASSES). The classes of an application are registered by the
+    // application (@RegisterForReflection).
+
+    static String[] JAVA_BEANS_CLASSES = {
+            // components, models, layouts, actions, key strokes, icons, transfer handlers... : every public class of
+            // javax.swing
+            "javax.swing.AbstractAction",
+            "javax.swing.AbstractButton",
+            "javax.swing.AbstractCellEditor",
+            "javax.swing.AbstractListModel",
+            "javax.swing.AbstractSpinnerModel",
+            "javax.swing.Action",
+            "javax.swing.ActionMap",
+            "javax.swing.BorderFactory",
+            "javax.swing.BoundedRangeModel",
+            "javax.swing.Box",
+            "javax.swing.Box$Filler",
+            "javax.swing.BoxLayout",
+            "javax.swing.ButtonGroup",
+            "javax.swing.ButtonModel",
+            "javax.swing.CellEditor",
+            "javax.swing.CellRendererPane",
+            "javax.swing.ComboBoxEditor",
+            "javax.swing.ComboBoxModel",
+            "javax.swing.ComponentInputMap",
+            "javax.swing.DebugGraphics",
+            "javax.swing.DefaultBoundedRangeModel",
+            "javax.swing.DefaultButtonModel",
+            "javax.swing.DefaultCellEditor",
+            "javax.swing.DefaultComboBoxModel",
+            "javax.swing.DefaultDesktopManager",
+            "javax.swing.DefaultFocusManager",
+            "javax.swing.DefaultListCellRenderer",
+            "javax.swing.DefaultListCellRenderer$UIResource",
+            "javax.swing.DefaultListModel",
+            "javax.swing.DefaultListSelectionModel",
+            "javax.swing.DefaultRowSorter",
+            "javax.swing.DefaultSingleSelectionModel",
+            "javax.swing.DesktopManager",
+            "javax.swing.DropMode",
+            "javax.swing.FocusManager",
+            "javax.swing.GrayFilter",
+            "javax.swing.GroupLayout",
+            "javax.swing.GroupLayout$Alignment",
+            "javax.swing.GroupLayout$Group",
+            "javax.swing.GroupLayout$ParallelGroup",
+            "javax.swing.GroupLayout$SequentialGroup",
+            "javax.swing.Icon",
+            "javax.swing.ImageIcon",
+            "javax.swing.InputMap",
+            "javax.swing.InputVerifier",
+            "javax.swing.InternalFrameFocusTraversalPolicy",
+            "javax.swing.JApplet",
+            "javax.swing.JButton",
+            "javax.swing.JCheckBox",
+            "javax.swing.JCheckBoxMenuItem",
+            "javax.swing.JColorChooser",
+            "javax.swing.JComboBox",
+            "javax.swing.JComboBox$KeySelectionManager",
+            "javax.swing.JComponent",
+            "javax.swing.JDesktopPane",
+            "javax.swing.JDialog",
+            "javax.swing.JEditorPane",
+            "javax.swing.JFileChooser",
+            "javax.swing.JFormattedTextField",
+            "javax.swing.JFormattedTextField$AbstractFormatter",
+            "javax.swing.JFormattedTextField$AbstractFormatterFactory",
+            "javax.swing.JFrame",
+            "javax.swing.JInternalFrame",
+            "javax.swing.JInternalFrame$JDesktopIcon",
+            "javax.swing.JLabel",
+            "javax.swing.JLayer",
+            "javax.swing.JLayeredPane",
+            "javax.swing.JList",
+            "javax.swing.JList$DropLocation",
+            "javax.swing.JMenu",
+            "javax.swing.JMenuBar",
+            "javax.swing.JMenuItem",
+            "javax.swing.JOptionPane",
+            "javax.swing.JPanel",
+            "javax.swing.JPasswordField",
+            "javax.swing.JPopupMenu",
+            "javax.swing.JPopupMenu$Separator",
+            "javax.swing.JProgressBar",
+            "javax.swing.JRadioButton",
+            "javax.swing.JRadioButtonMenuItem",
+            "javax.swing.JRootPane",
+            "javax.swing.JScrollBar",
+            "javax.swing.JScrollPane",
+            "javax.swing.JSeparator",
+            "javax.swing.JSlider",
+            "javax.swing.JSpinner",
+            "javax.swing.JSpinner$DateEditor",
+            "javax.swing.JSpinner$DefaultEditor",
+            "javax.swing.JSpinner$ListEditor",
+            "javax.swing.JSpinner$NumberEditor",
+            "javax.swing.JSplitPane",
+            "javax.swing.JTabbedPane",
+            "javax.swing.JTable",
+            "javax.swing.JTable$DropLocation",
+            "javax.swing.JTable$PrintMode",
+            "javax.swing.JTextArea",
+            "javax.swing.JTextField",
+            "javax.swing.JTextPane",
+            "javax.swing.JToggleButton",
+            "javax.swing.JToggleButton$ToggleButtonModel",
+            "javax.swing.JToolBar",
+            "javax.swing.JToolBar$Separator",
+            "javax.swing.JToolTip",
+            "javax.swing.JTree",
+            "javax.swing.JTree$DropLocation",
+            "javax.swing.JTree$DynamicUtilTreeNode",
+            "javax.swing.JViewport",
+            "javax.swing.JWindow",
+            "javax.swing.KeyStroke",
+            "javax.swing.LayoutFocusTraversalPolicy",
+            "javax.swing.LayoutStyle",
+            "javax.swing.LayoutStyle$ComponentPlacement",
+            "javax.swing.ListCellRenderer",
+            "javax.swing.ListModel",
+            "javax.swing.ListSelectionModel",
+            "javax.swing.LookAndFeel",
+            "javax.swing.MenuElement",
+            "javax.swing.MenuSelectionManager",
+            "javax.swing.MutableComboBoxModel",
+            "javax.swing.OverlayLayout",
+            "javax.swing.Painter",
+            "javax.swing.Popup",
+            "javax.swing.PopupFactory",
+            "javax.swing.ProgressMonitor",
+            "javax.swing.ProgressMonitorInputStream",
+            "javax.swing.Renderer",
+            "javax.swing.RepaintManager",
+            "javax.swing.RootPaneContainer",
+            "javax.swing.RowFilter",
+            "javax.swing.RowFilter$ComparisonType",
+            "javax.swing.RowFilter$Entry",
+            "javax.swing.RowSorter",
+            "javax.swing.RowSorter$SortKey",
+            "javax.swing.ScrollPaneConstants",
+            "javax.swing.ScrollPaneLayout",
+            "javax.swing.ScrollPaneLayout$UIResource",
+            "javax.swing.Scrollable",
+            "javax.swing.SingleSelectionModel",
+            "javax.swing.SizeRequirements",
+            "javax.swing.SizeSequence",
+            "javax.swing.SortOrder",
+            "javax.swing.SortingFocusTraversalPolicy",
+            "javax.swing.SpinnerDateModel",
+            "javax.swing.SpinnerListModel",
+            "javax.swing.SpinnerModel",
+            "javax.swing.SpinnerNumberModel",
+            "javax.swing.Spring",
+            "javax.swing.SpringLayout",
+            "javax.swing.SpringLayout$Constraints",
+            "javax.swing.SwingConstants",
+            "javax.swing.SwingContainer",
+            "javax.swing.SwingUtilities",
+            "javax.swing.SwingWorker",
+            "javax.swing.SwingWorker$StateValue",
+            "javax.swing.Timer",
+            "javax.swing.ToolTipManager",
+            "javax.swing.TransferHandler",
+            "javax.swing.TransferHandler$DropLocation",
+            "javax.swing.TransferHandler$TransferSupport",
+            "javax.swing.UIClientPropertyKey",
+            "javax.swing.UIDefaults",
+            "javax.swing.UIDefaults$ActiveValue",
+            "javax.swing.UIDefaults$LazyInputMap",
+            "javax.swing.UIDefaults$LazyValue",
+            "javax.swing.UIDefaults$ProxyLazyValue",
+            "javax.swing.UIManager",
+            "javax.swing.UIManager$LookAndFeelInfo",
+            "javax.swing.UnsupportedLookAndFeelException",
+            "javax.swing.ViewportLayout",
+            "javax.swing.WindowConstants",
+
+            // borders
+            "javax.swing.border.AbstractBorder",
+            "javax.swing.border.BevelBorder",
+            "javax.swing.border.Border",
+            "javax.swing.border.CompoundBorder",
+            "javax.swing.border.EmptyBorder",
+            "javax.swing.border.EtchedBorder",
+            "javax.swing.border.LineBorder",
+            "javax.swing.border.MatteBorder",
+            "javax.swing.border.SoftBevelBorder",
+            "javax.swing.border.StrokeBorder",
+            "javax.swing.border.TitledBorder",
+
+            // events and listeners (event sets, EventHandler)
+            "javax.swing.event.AncestorEvent",
+            "javax.swing.event.AncestorListener",
+            "javax.swing.event.CaretEvent",
+            "javax.swing.event.CaretListener",
+            "javax.swing.event.CellEditorListener",
+            "javax.swing.event.ChangeEvent",
+            "javax.swing.event.ChangeListener",
+            "javax.swing.event.DocumentEvent",
+            "javax.swing.event.DocumentEvent$ElementChange",
+            "javax.swing.event.DocumentEvent$EventType",
+            "javax.swing.event.DocumentListener",
+            "javax.swing.event.EventListenerList",
+            "javax.swing.event.HyperlinkEvent",
+            "javax.swing.event.HyperlinkEvent$EventType",
+            "javax.swing.event.HyperlinkListener",
+            "javax.swing.event.InternalFrameAdapter",
+            "javax.swing.event.InternalFrameEvent",
+            "javax.swing.event.InternalFrameListener",
+            "javax.swing.event.ListDataEvent",
+            "javax.swing.event.ListDataListener",
+            "javax.swing.event.ListSelectionEvent",
+            "javax.swing.event.ListSelectionListener",
+            "javax.swing.event.MenuDragMouseEvent",
+            "javax.swing.event.MenuDragMouseListener",
+            "javax.swing.event.MenuEvent",
+            "javax.swing.event.MenuKeyEvent",
+            "javax.swing.event.MenuKeyListener",
+            "javax.swing.event.MenuListener",
+            "javax.swing.event.MouseInputAdapter",
+            "javax.swing.event.MouseInputListener",
+            "javax.swing.event.PopupMenuEvent",
+            "javax.swing.event.PopupMenuListener",
+            "javax.swing.event.RowSorterEvent",
+            "javax.swing.event.RowSorterEvent$Type",
+            "javax.swing.event.RowSorterListener",
+            "javax.swing.event.SwingPropertyChangeSupport",
+            "javax.swing.event.TableColumnModelEvent",
+            "javax.swing.event.TableColumnModelListener",
+            "javax.swing.event.TableModelEvent",
+            "javax.swing.event.TableModelListener",
+            "javax.swing.event.TreeExpansionEvent",
+            "javax.swing.event.TreeExpansionListener",
+            "javax.swing.event.TreeModelEvent",
+            "javax.swing.event.TreeModelListener",
+            "javax.swing.event.TreeSelectionEvent",
+            "javax.swing.event.TreeSelectionListener",
+            "javax.swing.event.TreeWillExpandListener",
+            "javax.swing.event.UndoableEditEvent",
+            "javax.swing.event.UndoableEditListener",
+
+            // the UI resources of the look and feels (values of the component properties), and the editors of the combo
+            // boxes of the basic and Metal look and feels (the edited item of an editable combo box is a property of its
+            // editor)
+            "javax.swing.plaf.basic.BasicComboBoxEditor",
+            "javax.swing.plaf.basic.BasicComboBoxEditor$UIResource",
+            "javax.swing.plaf.metal.MetalComboBoxEditor",
+            "javax.swing.plaf.metal.MetalComboBoxEditor$UIResource",
+            "javax.swing.plaf.ActionMapUIResource",
+            "javax.swing.plaf.BorderUIResource",
+            "javax.swing.plaf.BorderUIResource$BevelBorderUIResource",
+            "javax.swing.plaf.BorderUIResource$CompoundBorderUIResource",
+            "javax.swing.plaf.BorderUIResource$EmptyBorderUIResource",
+            "javax.swing.plaf.BorderUIResource$EtchedBorderUIResource",
+            "javax.swing.plaf.BorderUIResource$LineBorderUIResource",
+            "javax.swing.plaf.BorderUIResource$MatteBorderUIResource",
+            "javax.swing.plaf.BorderUIResource$TitledBorderUIResource",
+            "javax.swing.plaf.ColorUIResource",
+            "javax.swing.plaf.ComponentInputMapUIResource",
+            "javax.swing.plaf.DimensionUIResource",
+            "javax.swing.plaf.FontUIResource",
+            "javax.swing.plaf.IconUIResource",
+            "javax.swing.plaf.InputMapUIResource",
+            "javax.swing.plaf.InsetsUIResource",
+            "javax.swing.plaf.UIResource",
+
+            // tables : headers, columns, models, renderers and editors
+            "javax.swing.table.AbstractTableModel",
+            "javax.swing.table.DefaultTableCellRenderer",
+            "javax.swing.table.DefaultTableCellRenderer$UIResource",
+            "javax.swing.table.DefaultTableColumnModel",
+            "javax.swing.table.DefaultTableModel",
+            "javax.swing.table.JTableHeader",
+            "javax.swing.table.TableCellEditor",
+            "javax.swing.table.TableCellRenderer",
+            "javax.swing.table.TableColumn",
+            "javax.swing.table.TableColumnModel",
+            "javax.swing.table.TableModel",
+            "javax.swing.table.TableRowSorter",
+            "javax.swing.table.TableStringConverter",
+
+            // text : documents, carets, highlighters, key maps, editor kits, formatters
+            "javax.swing.text.AbstractDocument",
+            "javax.swing.text.AttributeSet",
+            "javax.swing.text.Caret",
+            "javax.swing.text.DateFormatter",
+            "javax.swing.text.DefaultCaret",
+            "javax.swing.text.DefaultEditorKit",
+            "javax.swing.text.DefaultFormatter",
+            "javax.swing.text.DefaultFormatterFactory",
+            "javax.swing.text.DefaultHighlighter",
+            "javax.swing.text.DefaultHighlighter$DefaultHighlightPainter",
+            "javax.swing.text.DefaultStyledDocument",
+            "javax.swing.text.Document",
+            "javax.swing.text.DocumentFilter",
+            "javax.swing.text.EditorKit",
+            "javax.swing.text.Highlighter",
+            "javax.swing.text.Highlighter$HighlightPainter",
+            "javax.swing.text.InternationalFormatter",
+            "javax.swing.text.JTextComponent",
+            "javax.swing.text.JTextComponent$DropLocation",
+            "javax.swing.text.JTextComponent$KeyBinding",
+            "javax.swing.text.Keymap",
+            "javax.swing.text.LayeredHighlighter",
+            "javax.swing.text.LayeredHighlighter$LayerPainter",
+            "javax.swing.text.MaskFormatter",
+            "javax.swing.text.MutableAttributeSet",
+            "javax.swing.text.NavigationFilter",
+            "javax.swing.text.NumberFormatter",
+            "javax.swing.text.PlainDocument",
+            "javax.swing.text.SimpleAttributeSet",
+            "javax.swing.text.Style",
+            "javax.swing.text.StyleContext",
+            "javax.swing.text.StyleContext$NamedStyle",
+            "javax.swing.text.StyledDocument",
+            "javax.swing.text.StyledEditorKit",
+            "javax.swing.text.TabSet",
+            "javax.swing.text.TabStop",
+            "javax.swing.text.TextAction",
+
+            // trees : nodes, models, paths, selection models, renderers and editors
+            "javax.swing.tree.AbstractLayoutCache",
+            "javax.swing.tree.AbstractLayoutCache$NodeDimensions",
+            "javax.swing.tree.DefaultMutableTreeNode",
+            "javax.swing.tree.DefaultTreeCellEditor",
+            "javax.swing.tree.DefaultTreeCellEditor$DefaultTextField",
+            "javax.swing.tree.DefaultTreeCellEditor$EditorContainer",
+            "javax.swing.tree.DefaultTreeCellRenderer",
+            "javax.swing.tree.DefaultTreeModel",
+            "javax.swing.tree.DefaultTreeSelectionModel",
+            "javax.swing.tree.ExpandVetoException",
+            "javax.swing.tree.FixedHeightLayoutCache",
+            "javax.swing.tree.MutableTreeNode",
+            "javax.swing.tree.RowMapper",
+            "javax.swing.tree.TreeCellEditor",
+            "javax.swing.tree.TreeCellRenderer",
+            "javax.swing.tree.TreeModel",
+            "javax.swing.tree.TreeNode",
+            "javax.swing.tree.TreePath",
+            "javax.swing.tree.TreeSelectionModel",
+            "javax.swing.tree.VariableHeightLayoutCache",
+    };
+
+    static String[] WINDOWS_JAVA_BEANS_CLASSES = {
+    };
+
+    static String[] LINUX_JAVA_BEANS_CLASSES = {
     };
 
     // ------------------------------------------------------------------------------------------------------------- JNI

@@ -32,6 +32,14 @@ import java.util.List;
  * <li>{@code REFLECTIVE_CONSTRUCTORS} : classes registered for reflection with their constructors (also used for
  * classes that are only looked up by name; array classes are allowed).</li>
  * <li>{@code REFLECTIVE_METHODS} : single methods registered for reflection, {@code "fqcn#name(paramType,...)"}.</li>
+ * <li>{@code REFLECTIVE_FIELDS} : single fields registered for reflection, {@code "fqcn#field"}.</li>
+ * <li>{@code REFLECTIVE_PUBLIC_MEMBERS} : classes registered for reflection with their public constructors, public
+ * methods (inherited ones included : what {@code Class.getMethods()} returns) and public fields. This is what the
+ * JavaBeans API uses : the {@code Introspector}, {@code XMLEncoder} and {@code XMLDecoder}, {@code Statement},
+ * {@code Expression} and {@code EventHandler} only see the public members of a class.</li>
+ * <li>{@code JAVA_BEANS_CLASSES} : JDK classes registered as {@code REFLECTIVE_PUBLIC_MEMBERS} when
+ * {@code quarkus.desktop.awt.java-beans.jdk-classes} is enabled : the bean properties, event sets and public fields of
+ * the AWT components, layouts, geometry and event classes, for the JavaBeans API.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_CLASSES} : classes reached from native code, with all their constructors, methods and
  * fields.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_METHODS} : single methods or constructors reached from native code,
@@ -51,7 +59,9 @@ import java.util.List;
  * fonts, images, cursors, Robot, clipboard, printing to a PostScript stream, Desktop, Taskbar, SystemTray and sound.
  * The exceptions thrown by the Windows and Linux native code of {@code java.desktop} ({@code JNU_Throw*},
  * {@code FindClass} and {@code ThrowNew}, exceptions created with a constructor) were audited against what GraalVM
- * registers, as were the members that the native code looks up on a class and that the class inherits.
+ * registers, as were the members that the native code looks up on a class and that the class inherits. The JavaBeans
+ * lists come from the JDK 25 sources of {@code java.beans} and {@code com.sun.beans}, and from the tracing agent run with
+ * the JavaBeans pages of the showcase (introspection, property editors, {@code XMLEncoder} and {@code XMLDecoder}).
  */
 public final class AwtClassesAndResources {
 
@@ -196,6 +206,107 @@ public final class AwtClassesAndResources {
             "com.sun.imageio.plugins.wbmp.WBMPImageReaderSpi",
             "com.sun.imageio.plugins.wbmp.WBMPImageWriterSpi",
 
+            // JavaBeans : the bean info of java.awt.Component, found by name by the Introspector
+            "com.sun.beans.infos.ComponentBeanInfo",
+
+            // JavaBeans : the property editors of the JDK, created by name (PropertyEditorManager.findEditor)
+            "com.sun.beans.editors.BooleanEditor",
+            "com.sun.beans.editors.ByteEditor",
+            "com.sun.beans.editors.ColorEditor",
+            "com.sun.beans.editors.DoubleEditor",
+            "com.sun.beans.editors.FloatEditor",
+            "com.sun.beans.editors.FontEditor",
+            "com.sun.beans.editors.IntegerEditor",
+            "com.sun.beans.editors.LongEditor",
+            "com.sun.beans.editors.ShortEditor",
+            "com.sun.beans.editors.StringEditor",
+
+            // JavaBeans : the element handlers of XMLDecoder (and of the Synth XML files of Swing), created with reflection
+            "com.sun.beans.decoder.ArrayElementHandler",
+            "com.sun.beans.decoder.BooleanElementHandler",
+            "com.sun.beans.decoder.ByteElementHandler",
+            "com.sun.beans.decoder.CharElementHandler",
+            "com.sun.beans.decoder.ClassElementHandler",
+            "com.sun.beans.decoder.DoubleElementHandler",
+            "com.sun.beans.decoder.FalseElementHandler",
+            "com.sun.beans.decoder.FieldElementHandler",
+            "com.sun.beans.decoder.FloatElementHandler",
+            "com.sun.beans.decoder.IntElementHandler",
+            "com.sun.beans.decoder.JavaElementHandler",
+            "com.sun.beans.decoder.LongElementHandler",
+            "com.sun.beans.decoder.MethodElementHandler",
+            "com.sun.beans.decoder.NewElementHandler",
+            "com.sun.beans.decoder.NullElementHandler",
+            "com.sun.beans.decoder.ObjectElementHandler",
+            "com.sun.beans.decoder.PropertyElementHandler",
+            "com.sun.beans.decoder.ShortElementHandler",
+            "com.sun.beans.decoder.StringElementHandler",
+            "com.sun.beans.decoder.TrueElementHandler",
+            "com.sun.beans.decoder.VarElementHandler",
+            "com.sun.beans.decoder.VoidElementHandler",
+
+            // JavaBeans : the persistence delegates of XMLEncoder for the JDK types, created by name
+            // (MetaData.getPersistenceDelegate : without them, XMLEncoder fails with a StackOverflowError)
+            "java.beans.MetaData$java_awt_AWTKeyStroke_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_BorderLayout_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_CardLayout_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_Choice_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_Component_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_Container_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_Font_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_GridBagLayout_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_Insets_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_List_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_MenuBar_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_MenuShortcut_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_Menu_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_SystemColor_PersistenceDelegate",
+            "java.beans.MetaData$java_awt_font_TextAttribute_PersistenceDelegate",
+            "java.beans.MetaData$java_beans_beancontext_BeanContextSupport_PersistenceDelegate",
+            "java.beans.MetaData$java_lang_Class_PersistenceDelegate",
+            "java.beans.MetaData$java_lang_String_PersistenceDelegate",
+            "java.beans.MetaData$java_lang_reflect_Field_PersistenceDelegate",
+            "java.beans.MetaData$java_lang_reflect_Method_PersistenceDelegate",
+            "java.beans.MetaData$java_sql_Timestamp_PersistenceDelegate",
+            "java.beans.MetaData$java_util_AbstractCollection_PersistenceDelegate",
+            "java.beans.MetaData$java_util_AbstractList_PersistenceDelegate",
+            "java.beans.MetaData$java_util_AbstractMap_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collection_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$EmptyList_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$EmptyMap_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$EmptySet_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SingletonList_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SingletonMap_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SingletonSet_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SynchronizedCollection_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SynchronizedList_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SynchronizedMap_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SynchronizedRandomAccessList_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SynchronizedSet_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SynchronizedSortedMap_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$SynchronizedSortedSet_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$UnmodifiableCollection_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$UnmodifiableList_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$UnmodifiableMap_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$UnmodifiableRandomAccessList_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$UnmodifiableSet_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$UnmodifiableSortedMap_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Collections$UnmodifiableSortedSet_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Date_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Hashtable_PersistenceDelegate",
+            "java.beans.MetaData$java_util_List_PersistenceDelegate",
+            "java.beans.MetaData$java_util_Map_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_Box_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_DefaultComboBoxModel_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_DefaultListModel_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_JFrame_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_JMenu_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_JTabbedPane_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_ToolTipManager_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_border_MatteBorder_PersistenceDelegate",
+            "java.beans.MetaData$javax_swing_tree_DefaultMutableTreeNode_PersistenceDelegate",
+            "java.beans.MetaData$sun_swing_PrintColorUIResource_PersistenceDelegate",
+
             // Java2D : the rendering engine and the general XOR loops (loaded by name ; quarkus-awt registers the others)
             "sun.java2d.loops.XorCopyArgbToAny",
             "sun.java2d.loops.XorDrawGlyphListAAANY",
@@ -287,6 +398,64 @@ public final class AwtClassesAndResources {
             "com.sun.imageio.plugins.tiff.TIFFImageMetadataFormat#getInstance()",
             "com.sun.imageio.plugins.tiff.TIFFStreamMetadataFormat#getInstance()",
             "com.sun.imageio.plugins.wbmp.WBMPMetadataFormat#getInstance()",
+
+            // JavaBeans : the properties of the bean info of java.awt.Component (ComponentBeanInfo, found by the
+            // Introspector for every component : it fails with an Error when one of these accessors is missing)
+            "java.awt.Component#getBackground()",
+            "java.awt.Component#getFont()",
+            "java.awt.Component#getForeground()",
+            "java.awt.Component#getName()",
+            "java.awt.Component#isEnabled()",
+            "java.awt.Component#isFocusable()",
+            "java.awt.Component#isVisible()",
+            "java.awt.Component#setBackground(java.awt.Color)",
+            "java.awt.Component#setEnabled(boolean)",
+            "java.awt.Component#setFocusable(boolean)",
+            "java.awt.Component#setFont(java.awt.Font)",
+            "java.awt.Component#setForeground(java.awt.Color)",
+            "java.awt.Component#setName(java.lang.String)",
+            "java.awt.Component#setVisible(boolean)",
+
+            // JavaBeans : the java.lang values that XMLEncoder and XMLDecoder create and read with reflection (wrappers
+            // created from their text, enumerations, classes, fields, methods and arrays)
+            "java.lang.Boolean#<init>(java.lang.String)",
+            "java.lang.Byte#<init>(java.lang.String)",
+            "java.lang.Class#forName(java.lang.String)",
+            "java.lang.Class#getField(java.lang.String)",
+            "java.lang.Class#getMethod(java.lang.String,java.lang.Class[])",
+            "java.lang.Class#newInstance()",
+            "java.lang.Double#<init>(java.lang.String)",
+            "java.lang.Enum#valueOf(java.lang.Class,java.lang.String)",
+            "java.lang.Float#<init>(java.lang.String)",
+            "java.lang.Integer#<init>(java.lang.String)",
+            "java.lang.Long#<init>(java.lang.String)",
+            "java.lang.Object#getClass()",
+            "java.lang.Short#<init>(java.lang.String)",
+            "java.lang.String#<init>(java.lang.String)",
+            "java.lang.reflect.Array#newInstance(java.lang.Class,int)",
+            "java.lang.reflect.Field#get(java.lang.Object)",
+            "java.lang.reflect.Field#set(java.lang.Object,java.lang.Object)",
+            "java.net.URI#<init>(java.lang.String)",
+
+            // JavaBeans : the collections of java.util.Collections, created by XMLEncoder with their factory methods
+            "java.util.Collections#emptyList()",
+            "java.util.Collections#emptyMap()",
+            "java.util.Collections#emptySet()",
+            "java.util.Collections#singleton(java.lang.Object)",
+            "java.util.Collections#singletonList(java.lang.Object)",
+            "java.util.Collections#singletonMap(java.lang.Object,java.lang.Object)",
+            "java.util.Collections#synchronizedCollection(java.util.Collection)",
+            "java.util.Collections#synchronizedList(java.util.List)",
+            "java.util.Collections#synchronizedMap(java.util.Map)",
+            "java.util.Collections#synchronizedSet(java.util.Set)",
+            "java.util.Collections#synchronizedSortedMap(java.util.SortedMap)",
+            "java.util.Collections#synchronizedSortedSet(java.util.SortedSet)",
+            "java.util.Collections#unmodifiableCollection(java.util.Collection)",
+            "java.util.Collections#unmodifiableList(java.util.List)",
+            "java.util.Collections#unmodifiableMap(java.util.Map)",
+            "java.util.Collections#unmodifiableSet(java.util.Set)",
+            "java.util.Collections#unmodifiableSortedMap(java.util.SortedMap)",
+            "java.util.Collections#unmodifiableSortedSet(java.util.SortedSet)",
 
             // Swing core, basic look and feel : UI delegates (UIDefaults creates them with reflection)
             "javax.swing.plaf.basic.BasicButtonUI#createUI(javax.swing.JComponent)",
@@ -423,6 +592,227 @@ public final class AwtClassesAndResources {
             "com.sun.java.swing.plaf.motif.MotifTextPaneUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifToggleButtonUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifTreeUI#createUI(javax.swing.JComponent)",
+    };
+
+    static String[] REFLECTIVE_FIELDS = {
+            // JavaBeans : the private fields that the persistence delegates of XMLEncoder read (MetaData.getPrivateFieldValue)
+            "java.awt.CardLayout#vector",
+            "java.awt.CardLayout$Card#comp",
+            "java.awt.CardLayout$Card#name",
+            "java.awt.GridBagLayout#comptable",
+            "javax.swing.BoxLayout#axis",
+    };
+
+    static String[] WINDOWS_REFLECTIVE_FIELDS = {
+    };
+
+    static String[] LINUX_REFLECTIVE_FIELDS = {
+    };
+
+    static String[] REFLECTIVE_PUBLIC_MEMBERS = {
+            // JavaBeans : XMLDecoder is the owner object of the XML documents (<java class="java.beans.XMLDecoder">)
+            "java.beans.XMLDecoder",
+
+            // JavaBeans : the values of the AWT properties of the beans (colors, fonts, geometry, strokes and paints,
+            // shortcuts, text attributes), which XMLEncoder writes with their public constructors, methods and fields
+            // (the persistence delegates of the JDK, @ConstructorProperties) and XMLDecoder reads
+            "java.awt.AWTKeyStroke",
+            "java.awt.BasicStroke",
+            "java.awt.Color",
+            "java.awt.Cursor",
+            "java.awt.Dimension",
+            "java.awt.Font",
+            "java.awt.GradientPaint",
+            "java.awt.Insets",
+            "java.awt.LinearGradientPaint",
+            "java.awt.MenuShortcut",
+            "java.awt.MultipleGradientPaint",
+            "java.awt.MultipleGradientPaint$ColorSpaceType",
+            "java.awt.MultipleGradientPaint$CycleMethod",
+            "java.awt.Point",
+            "java.awt.RadialGradientPaint",
+            "java.awt.Rectangle",
+            "java.awt.TexturePaint",
+            "java.awt.font.TextAttribute",
+            "java.awt.geom.AffineTransform",
+            "java.awt.geom.Dimension2D",
+            "java.awt.geom.Point2D",
+            "java.awt.geom.Point2D$Double",
+            "java.awt.geom.Point2D$Float",
+            "java.awt.geom.Rectangle2D",
+            "java.awt.geom.Rectangle2D$Double",
+            "java.awt.geom.Rectangle2D$Float",
+            "java.awt.geom.RectangularShape",
+
+            // JavaBeans : the property change events, whose properties EventHandler listeners read by name
+            "java.beans.IndexedPropertyChangeEvent",
+            "java.beans.PropertyChangeEvent",
+            "java.util.EventObject",
+
+            // JavaBeans : the collections and dates of java.util, which XMLEncoder writes and XMLDecoder reads with their
+            // public constructors and methods (add, put, clear, get, set, remove...), called by name
+            "java.util.AbstractCollection",
+            "java.util.AbstractList",
+            "java.util.AbstractMap",
+            "java.util.AbstractQueue",
+            "java.util.AbstractSequentialList",
+            "java.util.AbstractSet",
+            "java.util.ArrayDeque",
+            "java.util.ArrayList",
+            "java.util.Collection",
+            "java.util.Date",
+            "java.util.Deque",
+            "java.util.Dictionary",
+            "java.util.EnumMap",
+            "java.util.HashMap",
+            "java.util.HashSet",
+            "java.util.Hashtable",
+            "java.util.IdentityHashMap",
+            "java.util.LinkedHashMap",
+            "java.util.LinkedHashSet",
+            "java.util.LinkedList",
+            "java.util.List",
+            "java.util.Map",
+            "java.util.NavigableMap",
+            "java.util.NavigableSet",
+            "java.util.PriorityQueue",
+            "java.util.Properties",
+            "java.util.Queue",
+            "java.util.Set",
+            "java.util.SortedMap",
+            "java.util.SortedSet",
+            "java.util.Stack",
+            "java.util.TreeMap",
+            "java.util.TreeSet",
+            "java.util.Vector",
+            "java.util.WeakHashMap",
+    };
+
+    static String[] WINDOWS_REFLECTIVE_PUBLIC_MEMBERS = {
+    };
+
+    static String[] LINUX_REFLECTIVE_PUBLIC_MEMBERS = {
+    };
+
+    // ---------------------------------------------------------------------------------------------------- JavaBeans
+    // The bean properties, event sets and public fields of the AWT classes, for the Introspector, XMLEncoder and
+    // XMLDecoder, Statement, Expression, EventHandler and Beans.instantiate : registered as REFLECTIVE_PUBLIC_MEMBERS when
+    // quarkus.desktop.awt.java-beans.jdk-classes is enabled. The classes of an application are registered by the
+    // application (@RegisterForReflection).
+
+    static String[] JAVA_BEANS_CLASSES = {
+            // components
+            "java.awt.Button",
+            "java.awt.Canvas",
+            "java.awt.Checkbox",
+            "java.awt.CheckboxMenuItem",
+            "java.awt.Choice",
+            "java.awt.Component",
+            "java.awt.Container",
+            "java.awt.Dialog",
+            "java.awt.FileDialog",
+            "java.awt.Frame",
+            "java.awt.Label",
+            "java.awt.List",
+            "java.awt.Menu",
+            "java.awt.MenuBar",
+            "java.awt.MenuComponent",
+            "java.awt.MenuItem",
+            "java.awt.Panel",
+            "java.awt.PopupMenu",
+            "java.awt.ScrollPane",
+            "java.awt.Scrollbar",
+            "java.awt.TextArea",
+            "java.awt.TextComponent",
+            "java.awt.TextField",
+            "java.awt.Window",
+
+            // component interfaces and enumerations
+            "java.awt.Adjustable",
+            "java.awt.Dialog$ModalExclusionType",
+            "java.awt.Dialog$ModalityType",
+            "java.awt.ItemSelectable",
+            "java.awt.MenuContainer",
+            "java.awt.Window$Type",
+
+            // layouts
+            "java.awt.BorderLayout",
+            "java.awt.CardLayout",
+            "java.awt.FlowLayout",
+            "java.awt.GridBagConstraints",
+            "java.awt.GridBagLayout",
+            "java.awt.GridLayout",
+            "java.awt.LayoutManager",
+            "java.awt.LayoutManager2",
+
+            // values of the component properties (the value classes of the beans are REFLECTIVE_PUBLIC_MEMBERS)
+            "java.awt.CheckboxGroup",
+            "java.awt.ComponentOrientation",
+            "java.awt.ContainerOrderFocusTraversalPolicy",
+            "java.awt.DefaultFocusTraversalPolicy",
+            "java.awt.FocusTraversalPolicy",
+            "java.awt.Paint",
+            "java.awt.Shape",
+            "java.awt.Stroke",
+            "java.awt.Transparency",
+
+            // events, listeners and adapters (event sets, EventHandler)
+            "java.awt.AWTEvent",
+            "java.awt.event.AWTEventListener",
+            "java.awt.event.AWTEventListenerProxy",
+            "java.awt.event.ActionEvent",
+            "java.awt.event.ActionListener",
+            "java.awt.event.AdjustmentEvent",
+            "java.awt.event.AdjustmentListener",
+            "java.awt.event.ComponentAdapter",
+            "java.awt.event.ComponentEvent",
+            "java.awt.event.ComponentListener",
+            "java.awt.event.ContainerAdapter",
+            "java.awt.event.ContainerEvent",
+            "java.awt.event.ContainerListener",
+            "java.awt.event.FocusAdapter",
+            "java.awt.event.FocusEvent",
+            "java.awt.event.FocusEvent$Cause",
+            "java.awt.event.FocusListener",
+            "java.awt.event.HierarchyBoundsAdapter",
+            "java.awt.event.HierarchyBoundsListener",
+            "java.awt.event.HierarchyEvent",
+            "java.awt.event.HierarchyListener",
+            "java.awt.event.InputEvent",
+            "java.awt.event.InputMethodEvent",
+            "java.awt.event.InputMethodListener",
+            "java.awt.event.InvocationEvent",
+            "java.awt.event.ItemEvent",
+            "java.awt.event.ItemListener",
+            "java.awt.event.KeyAdapter",
+            "java.awt.event.KeyEvent",
+            "java.awt.event.KeyListener",
+            "java.awt.event.MouseAdapter",
+            "java.awt.event.MouseEvent",
+            "java.awt.event.MouseListener",
+            "java.awt.event.MouseMotionAdapter",
+            "java.awt.event.MouseMotionListener",
+            "java.awt.event.MouseWheelEvent",
+            "java.awt.event.MouseWheelListener",
+            "java.awt.event.PaintEvent",
+            "java.awt.event.TextEvent",
+            "java.awt.event.TextListener",
+            "java.awt.event.WindowAdapter",
+            "java.awt.event.WindowEvent",
+            "java.awt.event.WindowFocusListener",
+            "java.awt.event.WindowListener",
+            "java.awt.event.WindowStateListener",
+            "java.beans.PropertyChangeListener",
+            "java.beans.PropertyChangeListenerProxy",
+            "java.beans.VetoableChangeListener",
+            "java.beans.VetoableChangeListenerProxy",
+            "java.util.EventListener",
+    };
+
+    static String[] WINDOWS_JAVA_BEANS_CLASSES = {
+    };
+
+    static String[] LINUX_JAVA_BEANS_CLASSES = {
     };
 
     // ------------------------------------------------------------------------------------------------------------- JNI
@@ -860,6 +1250,11 @@ public final class AwtClassesAndResources {
             "com.sun.imageio.plugins.jpeg.JPEGImageWriterResources",
             "com.sun.imageio.plugins.jpeg.JPEGStreamMetadataFormatResources",
             "com.sun.imageio.plugins.png.PNGMetadataFormatResources",
+
+            // JavaBeans : the messages of the XML parser (module java.xml) that XMLDecoder, and Swing for the Synth XML
+            // files, uses : without them, a malformed document fails with a MissingResourceException instead of being
+            // reported as a SAXParseException
+            "com.sun.org.apache.xerces.internal.impl.msg.XMLMessages",
 
             // print and page dialogs
             "sun.print.resources.serviceui",

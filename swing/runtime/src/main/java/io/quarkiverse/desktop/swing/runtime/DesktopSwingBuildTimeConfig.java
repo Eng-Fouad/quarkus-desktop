@@ -31,6 +31,40 @@ public interface DesktopSwingBuildTimeConfig {
     Set<IncludedLookAndFeel> includedLookAndFeels();
 
     /**
+     * The JavaBeans API in native executables.
+     */
+    JavaBeans javaBeans();
+
+    /**
+     * The JavaBeans API ({@code java.beans}) in native executables (see also
+     * {@code quarkus.desktop.awt.java-beans.jdk-classes}).
+     */
+    interface JavaBeans {
+
+        /**
+         * Whether the JDK Swing classes support the JavaBeans API in native executables : their public constructors,
+         * methods and fields are registered for reflection, so that the {@code Introspector} finds their bean properties
+         * and event sets, and that {@code XMLEncoder}, {@code XMLDecoder}, {@code Statement}, {@code Expression},
+         * {@code EventHandler} and {@code Beans.instantiate} work with them, as in JVM mode. The AWT classes that they
+         * extend are registered too (as with {@code quarkus.desktop.awt.java-beans.jdk-classes=true}).
+         * <p>
+         * The classes are the public classes of {@code javax.swing}, {@code javax.swing.border},
+         * {@code javax.swing.event}, {@code javax.swing.table} and {@code javax.swing.tree} (components, models,
+         * layouts, borders, actions, key strokes, icons, renderers and editors, events and listeners), the text
+         * components, documents and formatters of {@code javax.swing.text}, and the UI resources of
+         * {@code javax.swing.plaf}. For instance {@code XMLEncoder} writes a {@code JPanel} with its border, layout and
+         * components, a {@code JTabbedPane}, a {@code JTree} with its nodes, and {@code XMLDecoder} reads them.
+         * <p>
+         * It is disabled by default because it makes a native executable 3 to 4 MB larger (many public methods
+         * of the Swing classes are not used otherwise). When disabled, the {@code Introspector} finds no bean property
+         * of these classes (other than the properties usually transferred with {@code new TransferHandler("text")},
+         * which are always registered) and {@code XMLEncoder} cannot write them.
+         */
+        @WithDefault("false")
+        boolean jdkClasses();
+    }
+
+    /**
      * A look and feel of the JDK included in native executables.
      */
     enum IncludedLookAndFeel {

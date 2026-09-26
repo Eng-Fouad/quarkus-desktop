@@ -11,9 +11,11 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
 
+import io.quarkiverse.desktop.awt.deployment.AwtJavaBeansClassesBuildItem;
 import io.quarkiverse.desktop.awt.deployment.DesktopAwtRuntimeInitBuildItem;
 import io.quarkiverse.desktop.awt.deployment.DesktopTargetPlatformBuildItem;
 import io.quarkiverse.desktop.awt.deployment.MemberEntry;
+import io.quarkiverse.desktop.awt.deployment.ReflectivePublicMembersBuildItem;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingBuildTimeConfig;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingBuildTimeConfig.IncludedLookAndFeel;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingRecorder;
@@ -31,6 +33,7 @@ import io.quarkus.deployment.builditem.nativeimage.JniRuntimeAccessMethodBuildIt
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBundleBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourcePatternsBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveFieldBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
@@ -76,7 +79,8 @@ class DesktopSwingProcessor {
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void reflection(DesktopTargetPlatformBuildItem platform, DesktopSwingBuildTimeConfig config,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
+            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
+            BuildProducer<ReflectiveFieldBuildItem> reflectiveFields) {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(entries(platform, config,
                 SwingClassesAndResources.REFLECTIVE_CLASSES,
                 SwingClassesAndResources.WINDOWS_REFLECTIVE_CLASSES,
@@ -91,6 +95,36 @@ class DesktopSwingProcessor {
             MemberEntry entry = MemberEntry.method(method);
             reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, false, entry.className(), entry.name(),
                     entry.parameterTypes()));
+        }
+        for (String field : entries(platform, config, SwingClassesAndResources.REFLECTIVE_FIELDS,
+                SwingClassesAndResources.WINDOWS_REFLECTIVE_FIELDS,
+                SwingClassesAndResources.LINUX_REFLECTIVE_FIELDS)) {
+            MemberEntry entry = MemberEntry.field(field);
+            reflectiveFields.produce(new ReflectiveFieldBuildItem(REASON, entry.className(), entry.name()));
+        }
+    }
+
+    /**
+     * The classes registered with their public members : the {@code REFLECTIVE_PUBLIC_MEMBERS} lists, and the JavaBeans
+     * registration of the Swing classes, and of the AWT classes they extend
+     * ({@code quarkus.desktop.swing.java-beans.jdk-classes}).
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void javaBeans(DesktopTargetPlatformBuildItem platform, DesktopSwingBuildTimeConfig config,
+            BuildProducer<ReflectivePublicMembersBuildItem> publicMembers,
+            BuildProducer<AwtJavaBeansClassesBuildItem> awtJavaBeans) {
+        String[] classes = entries(platform, config, SwingClassesAndResources.REFLECTIVE_PUBLIC_MEMBERS,
+                SwingClassesAndResources.WINDOWS_REFLECTIVE_PUBLIC_MEMBERS,
+                SwingClassesAndResources.LINUX_REFLECTIVE_PUBLIC_MEMBERS);
+        if (classes.length > 0) {
+            publicMembers.produce(new ReflectivePublicMembersBuildItem(List.of(classes)));
+        }
+        if (config.javaBeans().jdkClasses()) {
+            publicMembers.produce(new ReflectivePublicMembersBuildItem(List.of(entries(platform, config,
+                    SwingClassesAndResources.JAVA_BEANS_CLASSES,
+                    SwingClassesAndResources.WINDOWS_JAVA_BEANS_CLASSES,
+                    SwingClassesAndResources.LINUX_JAVA_BEANS_CLASSES))));
+            awtJavaBeans.produce(new AwtJavaBeansClassesBuildItem());
         }
     }
 

@@ -145,5 +145,30 @@ endif::add-copy-button-to-env-var[]
 a|`jdk`, `minimal`
 |`+++jdk+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-java-beans-jdk-classes]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-java-beans-jdk-classes[`+++quarkus.desktop.awt.java-beans.jdk-classes+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.java-beans.jdk-classes+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the JDK AWT classes support the JavaBeans API in native executables : their public constructors, methods and fields are registered for reflection, so that the `Introspector` finds their bean properties and event sets, and that `XMLEncoder`, `XMLDecoder`, `Statement`, `Expression`, `EventHandler` and `Beans.instantiate` work with them, as in JVM mode.
+
+The classes are the AWT components and menu components, the layouts (`GridBagConstraints` included), the values of their properties (`Color`, `Font`, `Insets`, `Point`, `Rectangle`, `Cursor`, `MenuShortcut`...), the AWT events, listeners and adapters. For instance `Introspector.getBeanInfo(Button.class)` finds the `label` property, `XMLEncoder` writes a `Panel` with its layout and components, and `EventHandler.create(ActionListener.class, target, "text", "source.label")` reads the label of the source of an `ActionEvent`.
+
+It makes a native executable about 0.3 MB larger. When disabled, the `Introspector` finds no bean property of these classes (other than those that the extensions register for their own needs) and `XMLEncoder` cannot write them. The same property of the Desktop Swing extension, `quarkus.desktop.swing.java-beans.jdk-classes` (disabled by default), registers the Swing classes, and the AWT classes that they extend whatever the value of this property.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_JAVA_BEANS_JDK_CLASSES+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_JAVA_BEANS_JDK_CLASSES+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
 |===
 

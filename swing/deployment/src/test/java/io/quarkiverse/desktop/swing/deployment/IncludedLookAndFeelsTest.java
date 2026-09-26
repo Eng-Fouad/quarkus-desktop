@@ -33,8 +33,7 @@ class IncludedLookAndFeelsTest {
         excluded.removeAll(Arrays.asList(metal.filter(allEntries().toArray(String[]::new))));
         for (String entry : excluded) {
             assertTrue(entry.contains("nimbus") || entry.contains("synth") || entry.contains("motif")
-                    || entry.contains("windows") || entry.contains("gtk") || entry.contains("multi")
-                    || entry.startsWith("com.sun.beans.decoder.") || entry.equals("java.lang.Class#newInstance()"),
+                    || entry.contains("windows") || entry.contains("gtk") || entry.contains("multi"),
                     "excluded : " + entry);
         }
         // The Swing core, text and bean properties stay
@@ -59,11 +58,10 @@ class IncludedLookAndFeelsTest {
             assertTrue(included.includes("javax.swing.plaf.synth.SynthLookAndFeel#createUI(javax.swing.JComponent)"));
             assertTrue(included.includes("com.sun.swing.internal.plaf.synth.resources.synth"));
             // but not the loading of Synth XML files
-            assertFalse(included.includes("com.sun.beans.decoder.ObjectElementHandler"));
             assertFalse(included.includes("javax.swing.plaf.synth.ColorType"));
         }
         IncludedLookAndFeels synth = new IncludedLookAndFeels(Set.of(IncludedLookAndFeel.SYNTH));
-        assertTrue(synth.includes("com.sun.beans.decoder.ObjectElementHandler"));
+        assertTrue(synth.includes("javax.swing.plaf.synth.ColorType"));
         assertTrue(synth.includes("javax.swing.plaf.synth.SynthLookAndFeel"));
         assertFalse(synth.includes("javax.swing.plaf.nimbus.NimbusLookAndFeel"));
     }

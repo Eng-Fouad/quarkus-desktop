@@ -26,6 +26,8 @@ AWT feature: the Windows substitutions of `sun.awt.windows.WObjectPeer`, `sun.ja
 `sun.awt.windows.WToolkit`, which make every window crash, disable DPI awareness, and disable AWT print jobs, and the
 substitution of `sun.font.Type1Font`, which rejects Type 1 fonts (see <<fonts>>). The build logs a warning if a
 `quarkus-awt` version has other substitutions of the Windows AWT classes or of Type 1 fonts (for instance renamed ones).
+* The JavaBeans API: property editors, `XMLEncoder` and `XMLDecoder`, `EventHandler`, and the bean properties of the
+AWT classes (see <<java-beans>>).
 * Run time initialization of the JDK desktop packages, and of the *application classes whose static initializer uses
 them*: a class with a `static final Color ACCENT = new Color(0x0096c9)` (or a `Font`, an icon, a border...) is
 initialized at run time, as in JVM mode, instead of failing the native build.
@@ -154,6 +156,35 @@ Screen readers (JAWS, NVDA...) access Java applications through the Java Access 
 leave it out: the executable then ignores the assistive technologies configured by the user, instead of failing to start
 the AWT toolkit. On Linux, the executable always ignores them (the Java ATK wrapper cannot be loaded in a native
 executable).
+
+[[java-beans]]
+=== JavaBeans
+
+The JavaBeans API (`java.beans`) works with reflection. Native executables always support its core:
+
+* the property editors of the JDK (`PropertyEditorManager.findEditor` for the primitive types, `String`, `Color` and
+`Font`), and the bean info of `java.awt.Component`;
+* `XMLEncoder` and `XMLDecoder` with the persistence delegates of the JDK: the `java.lang` values, enumerations,
+classes and arrays, the `java.util` collections and dates, and the AWT values (`Color`, `Font`, `Insets`, `Point`,
+`Dimension`, `Rectangle`, `Cursor`, `MenuShortcut`, `AWTKeyStroke`, strokes and paints, `TextAttribute`, the `java.awt.geom`
+points, dimensions, rectangles and transforms);
+* `EventHandler` listeners on property change events.
+
+The *application* classes are registered by the application, as usual: `@RegisterForReflection` for the beans, their
+bean info, editors and persistence delegates, and `@RegisterForProxy` for the listener interfaces of `EventHandler`
+(one annotation per interface: `@RegisterForProxy(targets = {A.class, B.class})` registers a single proxy class that
+implements both).
+
+The bean properties of the AWT components, menus, layouts, events and listeners are registered too, unless
+`quarkus.desktop.awt.java-beans.jdk-classes` is `false`: the public constructors, methods and fields of these classes.
+The `Introspector` finds the properties and event sets of the AWT components (`Introspector.getBeanInfo(Button.class)`
+finds the `label` property), `XMLEncoder` and `XMLDecoder` write and read AWT forms (a `Panel` with its layout, components
+and constraints, menu bars), `EventHandler.create(ActionListener.class, label, "text", "source.label")` reads the
+source of an `ActionEvent`, and `Beans.instantiate(loader, "java.awt.Button")` creates a button. The Swing extension has
+the same property for the Swing classes, disabled by default (see xref:swing.adoc#java-beans[JavaBeans]).
+
+This registration makes a native executable about 0.3 MB larger: 0.29 MB for the showcase application (127.3 MB without
+it, and 106.2 MB for its AWT only variant), 0.34 MB for the Swing integration test application (109.4 MB without it).
 
 === Headless mode
 

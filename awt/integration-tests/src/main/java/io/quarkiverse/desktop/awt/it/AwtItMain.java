@@ -20,6 +20,7 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
+import java.awt.Insets;
 import java.awt.Label;
 import java.awt.List;
 import java.awt.MediaTracker;
@@ -27,7 +28,9 @@ import java.awt.Menu;
 import java.awt.MenuBar;
 import java.awt.MenuItem;
 import java.awt.Panel;
+import java.awt.Point;
 import java.awt.PopupMenu;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.SystemTray;
 import java.awt.Taskbar;
@@ -42,6 +45,12 @@ import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.beans.PropertyEditor;
+import java.beans.PropertyEditorManager;
+import java.beans.XMLDecoder;
+import java.beans.XMLEncoder;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -50,7 +59,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -127,6 +140,7 @@ public class AwtItMain implements QuarkusApplication {
         check("imageio", AwtItMain::imageio);
         check("imageio-plugins", AwtItMain::imageioPlugins);
         check("text-attributes", AwtItMain::textAttributes);
+        check("java-beans", AwtItMain::javaBeans);
         check("print-stream", AwtItMain::printStream);
         check("print-services", () -> {
             PrintService[] services = PrintServiceLookup.lookupPrintServices(null, null);
@@ -301,6 +315,41 @@ public class AwtItMain implements QuarkusApplication {
             require(in.readObject() == TextAttribute.KERNING, "TextAttribute.KERNING not read back");
         }
         return "serialized=" + bytes.size();
+    }
+
+    /**
+     * The core of the JavaBeans API : the property editors of the JDK, XMLEncoder and XMLDecoder with the persistence
+     * delegates of the JDK types, and the bean properties of the AWT classes (quarkus.desktop.awt.java-beans.jdk-classes,
+     * enabled by default).
+     */
+    private static Object javaBeans() throws Exception {
+        PropertyEditor editor = PropertyEditorManager.findEditor(int.class);
+        require(editor != null, "no int editor");
+        editor.setAsText("42");
+        require(Integer.valueOf(42).equals(editor.getValue()), "int editor value " + editor.getValue());
+        require(PropertyEditorManager.findEditor(String.class) != null, "no String editor");
+        java.util.List<Object> values = new ArrayList<>(java.util.List.of(new Color(30, 136, 229, 200),
+                new Font(Font.SERIF, Font.BOLD, 13), new Insets(1, 2, 3, 4), new Point(-5, 7),
+                new Rectangle(10, 20, 300, 400), new Dimension(640, 480), new Date(0), new TreeMap<>(Map.of("a", 1)),
+                Locale.Category.FORMAT, "text"));
+        ByteArrayOutputStream xml = new ByteArrayOutputStream();
+        java.util.List<Exception> exceptions = new ArrayList<>();
+        try (XMLEncoder encoder = new XMLEncoder(xml)) {
+            encoder.setExceptionListener(exceptions::add);
+            encoder.writeObject(values);
+        }
+        require(exceptions.isEmpty(), "encoding : " + exceptions);
+        Object decoded;
+        try (XMLDecoder decoder = new XMLDecoder(new ByteArrayInputStream(xml.toByteArray()), null, exceptions::add)) {
+            decoded = decoder.readObject();
+        }
+        require(exceptions.isEmpty(), "decoding : " + exceptions);
+        require(values.equals(decoded), "decoded " + decoded + " instead of " + values);
+        PropertyDescriptor[] properties = Introspector.getBeanInfo(Button.class).getPropertyDescriptors();
+        require(Arrays.stream(properties).anyMatch(p -> p.getName().equals("label") && p.getWriteMethod() != null),
+                "no label property of java.awt.Button");
+        return "editor=" + editor.getClass().getSimpleName() + " xml=" + xml.size() + " buttonProperties="
+                + properties.length;
     }
 
     // ------------------------------------------------------------------------------------------------------- printing

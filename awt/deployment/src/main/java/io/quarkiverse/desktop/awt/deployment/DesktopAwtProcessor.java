@@ -9,10 +9,12 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 import org.jboss.jandex.ClassInfo;
@@ -29,6 +31,7 @@ import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
 import io.quarkus.bootstrap.model.ApplicationModel;
+import io.quarkus.builder.Json;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.IsNormal;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -51,6 +54,7 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBundleBuil
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourcePatternsBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageSystemPropertyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveFieldBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
@@ -97,6 +101,12 @@ class DesktopAwtProcessor {
             // read them as the JDK does, with the freetype library of the JDK, which supports them, and the JNI callback
             // Type1Font.readFile that quarkus-awt registers
             "io/quarkus/awt/runtime/Target_sun_font_Type1Font.class");
+
+    /**
+     * The resource of the reflection configuration of the classes registered with their public members.
+     */
+    static final String PUBLIC_MEMBERS_REFLECT_CONFIG = "META-INF/native-image/io.quarkiverse.desktop/"
+            + "quarkus-desktop-awt-public-members/reflect-config.json";
 
     private static final DotName COMPONENT = DotName.createSimple("java.awt.Component");
     private static final DotName AWT_EVENT = DotName.createSimple("java.awt.AWTEvent");
@@ -193,7 +203,8 @@ class DesktopAwtProcessor {
 
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void reflection(DesktopTargetPlatformBuildItem platform, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
+            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
+            BuildProducer<ReflectiveFieldBuildItem> reflectiveFields) {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(platform.withPlatform(
                 AwtClassesAndResources.REFLECTIVE_CLASSES,
                 AwtClassesAndResources.WINDOWS_REFLECTIVE_CLASSES,
@@ -214,6 +225,72 @@ class DesktopAwtProcessor {
             reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, false, entry.className(), entry.name(),
                     entry.parameterTypes()));
         }
+        for (String field : platform.withPlatform(AwtClassesAndResources.REFLECTIVE_FIELDS,
+                AwtClassesAndResources.WINDOWS_REFLECTIVE_FIELDS,
+                AwtClassesAndResources.LINUX_REFLECTIVE_FIELDS)) {
+            MemberEntry entry = MemberEntry.field(field);
+            reflectiveFields.produce(new ReflectiveFieldBuildItem(REASON, entry.className(), entry.name()));
+        }
+    }
+
+    /**
+     * The classes registered with their public members : always the {@code REFLECTIVE_PUBLIC_MEMBERS} lists, and the
+     * {@code JAVA_BEANS_CLASSES} lists when {@code quarkus.desktop.awt.java-beans.jdk-classes} is enabled or when
+     * another extension needs them (the JavaBeans registration of the Swing classes, which extend AWT classes).
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void publicMembers(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config,
+            List<AwtJavaBeansClassesBuildItem> javaBeansRequests,
+            BuildProducer<ReflectivePublicMembersBuildItem> publicMembers) {
+        publicMembers.produce(new ReflectivePublicMembersBuildItem(List.of(platform.withPlatform(
+                AwtClassesAndResources.REFLECTIVE_PUBLIC_MEMBERS,
+                AwtClassesAndResources.WINDOWS_REFLECTIVE_PUBLIC_MEMBERS,
+                AwtClassesAndResources.LINUX_REFLECTIVE_PUBLIC_MEMBERS))));
+        if (config.javaBeans().jdkClasses() || !javaBeansRequests.isEmpty()) {
+            publicMembers.produce(new ReflectivePublicMembersBuildItem(List.of(platform.withPlatform(
+                    AwtClassesAndResources.JAVA_BEANS_CLASSES,
+                    AwtClassesAndResources.WINDOWS_JAVA_BEANS_CLASSES,
+                    AwtClassesAndResources.LINUX_JAVA_BEANS_CLASSES))));
+        }
+    }
+
+    /**
+     * Registers the classes of the {@link ReflectivePublicMembersBuildItem}s with their public constructors, methods
+     * (inherited ones included) and fields. Quarkus has no build item for public methods and fields only : the extension
+     * adds a reflection configuration file to the native build, as Quarkus does for its own reflection configuration.
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void publicMembersReflectConfig(List<ReflectivePublicMembersBuildItem> publicMembers,
+            BuildProducer<GeneratedResourceBuildItem> generatedResources) {
+        Set<String> classNames = new TreeSet<>();
+        for (ReflectivePublicMembersBuildItem item : publicMembers) {
+            classNames.addAll(item.getClassNames());
+        }
+        if (!classNames.isEmpty()) {
+            generatedResources.produce(new GeneratedResourceBuildItem(PUBLIC_MEMBERS_REFLECT_CONFIG,
+                    publicMembersReflectConfig(classNames).getBytes(StandardCharsets.UTF_8)));
+        }
+    }
+
+    /**
+     * The reflection configuration ({@code reflect-config.json}) of classes registered with their public members.
+     */
+    static String publicMembersReflectConfig(Collection<String> classNames) {
+        Json.JsonArrayBuilder classes = Json.array();
+        for (String className : classNames) {
+            classes.add(Json.object()
+                    .put("name", className)
+                    .put("allPublicConstructors", true)
+                    .put("allPublicMethods", true)
+                    .put("allPublicFields", true));
+        }
+        StringBuilder json = new StringBuilder();
+        try {
+            classes.appendTo(json);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return json.toString();
     }
 
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)

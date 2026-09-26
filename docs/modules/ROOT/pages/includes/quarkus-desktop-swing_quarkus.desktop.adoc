@@ -32,6 +32,31 @@ endif::add-copy-button-to-env-var[]
 a|list of `all`, `metal`, `nimbus`, `synth`, `motif`, `windows`, `gtk`, `multi`
 |`+++all+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-swing_quarkus-desktop-swing-java-beans-jdk-classes]] [.property-path]##link:#quarkus-desktop-swing_quarkus-desktop-swing-java-beans-jdk-classes[`+++quarkus.desktop.swing.java-beans.jdk-classes+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.swing.java-beans.jdk-classes+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the JDK Swing classes support the JavaBeans API in native executables : their public constructors, methods and fields are registered for reflection, so that the `Introspector` finds their bean properties and event sets, and that `XMLEncoder`, `XMLDecoder`, `Statement`, `Expression`, `EventHandler` and `Beans.instantiate` work with them, as in JVM mode. The AWT classes that they extend are registered too (as with `quarkus.desktop.awt.java-beans.jdk-classes=true`).
+
+The classes are the public classes of `javax.swing`, `javax.swing.border`, `javax.swing.event`, `javax.swing.table` and `javax.swing.tree` (components, models, layouts, borders, actions, key strokes, icons, renderers and editors, events and listeners), the text components, documents and formatters of `javax.swing.text`, and the UI resources of `javax.swing.plaf`. For instance `XMLEncoder` writes a `JPanel` with its border, layout and components, a `JTabbedPane`, a `JTree` with its nodes, and `XMLDecoder` reads them.
+
+It is disabled by default because it makes a native executable 3 to 4 MB larger (many public methods of the Swing classes are not used otherwise). When disabled, the `Introspector` finds no bean property of these classes (other than the properties usually transferred with `new TransferHandler("text")`, which are always registered) and `XMLEncoder` cannot write them.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_SWING_JAVA_BEANS_JDK_CLASSES+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_SWING_JAVA_BEANS_JDK_CLASSES+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
 a| [[quarkus-desktop-swing_quarkus-desktop-swing-look-and-feel]] [.property-path]##link:#quarkus-desktop-swing_quarkus-desktop-swing-look-and-feel[`+++quarkus.desktop.swing.look-and-feel+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.desktop.swing.look-and-feel+++[]
