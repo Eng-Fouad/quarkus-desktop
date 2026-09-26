@@ -197,6 +197,9 @@ class DesktopAwtProcessor {
                 AwtClassesAndResources.LINUX_REFLECTIVE_CONSTRUCTORS)).reason(REASON).build());
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(AwtClassesAndResources.TRANSFERRED_SERIALIZABLE_CLASS)
                 .serialization().reason(REASON).build());
+        reflectiveClasses.produce(ReflectiveClassBuildItem
+                .builder(AwtClassesAndResources.TEXT_ATTRIBUTE_SERIALIZABLE_CLASSES).serialization().reason(REASON)
+                .build());
         for (String method : platform.withPlatform(AwtClassesAndResources.REFLECTIVE_METHODS,
                 AwtClassesAndResources.WINDOWS_REFLECTIVE_METHODS,
                 AwtClassesAndResources.LINUX_REFLECTIVE_METHODS)) {

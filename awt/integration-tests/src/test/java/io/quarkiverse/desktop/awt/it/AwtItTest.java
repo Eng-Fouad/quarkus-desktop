@@ -30,7 +30,7 @@ public class AwtItTest {
         assertTrue(output.contains("SUMMARY ok="), output);
         assertFalse(output.contains(" FAILED "), output);
         for (String check : new String[] { "environment", "static-initializer", "java2d", "fonts", "imageio",
-                "print-stream", "print-services", "flavor-map", "sound" }) {
+                "imageio-plugins", "text-attributes", "print-stream", "print-services", "flavor-map", "sound" }) {
             assertTrue(output.contains("RESULT " + check + " OK"), check + "\n" + output);
         }
         // Same as the JVM running the tests : the text of the native components is encoded with it

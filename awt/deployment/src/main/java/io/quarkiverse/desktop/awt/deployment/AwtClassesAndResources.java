@@ -1,5 +1,7 @@
 package io.quarkiverse.desktop.awt.deployment;
 
+import java.util.List;
+
 /**
  * What AWT needs in a native executable, on top of what {@code io.quarkus:quarkus-awt} (headless Java2D, ImageIO and
  * fonts) already registers : windows and peers, Java2D surfaces, printing, data transfer, input methods, sound and
@@ -47,6 +49,9 @@ package io.quarkiverse.desktop.awt.deployment;
  * JDK 25 native sources, and the tracing agent run on Windows and Linux (Xvfb) with an AWT application exercising
  * windows, peers, menus, dialogs, file dialogs, Java2D (buffered images, volatile images, buffer strategies, XOR mode),
  * fonts, images, cursors, Robot, clipboard, printing to a PostScript stream, Desktop, Taskbar, SystemTray and sound.
+ * The exceptions thrown by the Windows and Linux native code of {@code java.desktop} ({@code JNU_Throw*},
+ * {@code FindClass} and {@code ThrowNew}, exceptions created with a constructor) were audited against what GraalVM
+ * registers, as were the members that the native code looks up on a class and that the class inherits.
  */
 public final class AwtClassesAndResources {
 
@@ -72,6 +77,14 @@ public final class AwtClassesAndResources {
      * application (sun.awt.datatransfer.TransferableProxy), and strings are the common case (DataFlavor.stringFlavor).
      */
     static final String TRANSFERRED_SERIALIZABLE_CLASS = "java.lang.String";
+
+    /**
+     * Registered for serialization : the text attributes (keys of the attributes of fonts and attributed strings,
+     * serialized with a {@code readResolve} method that returns the constant), and the attribute class they extend,
+     * whose class descriptor is serialized with them.
+     */
+    static final List<String> TEXT_ATTRIBUTE_SERIALIZABLE_CLASSES = List.of("java.awt.font.TextAttribute",
+            "java.text.AttributedCharacterIterator$Attribute");
 
     private AwtClassesAndResources() {
         // Constants
@@ -168,6 +181,21 @@ public final class AwtClassesAndResources {
             "javax.imageio.spi.ImageReaderSpi",
             "javax.imageio.spi.ImageWriterSpi",
 
+            // ImageIO : the service providers of the JDK plugins, looked up by name (the reader of a writer and the writer
+            // of a reader : ImageIO.getImageReader(ImageWriter), ImageIO.getImageWriter(ImageReader))
+            "com.sun.imageio.plugins.bmp.BMPImageReaderSpi",
+            "com.sun.imageio.plugins.bmp.BMPImageWriterSpi",
+            "com.sun.imageio.plugins.gif.GIFImageReaderSpi",
+            "com.sun.imageio.plugins.gif.GIFImageWriterSpi",
+            "com.sun.imageio.plugins.jpeg.JPEGImageReaderSpi",
+            "com.sun.imageio.plugins.jpeg.JPEGImageWriterSpi",
+            "com.sun.imageio.plugins.png.PNGImageReaderSpi",
+            "com.sun.imageio.plugins.png.PNGImageWriterSpi",
+            "com.sun.imageio.plugins.tiff.TIFFImageReaderSpi",
+            "com.sun.imageio.plugins.tiff.TIFFImageWriterSpi",
+            "com.sun.imageio.plugins.wbmp.WBMPImageReaderSpi",
+            "com.sun.imageio.plugins.wbmp.WBMPImageWriterSpi",
+
             // Java2D : the rendering engine and the general XOR loops (loaded by name ; quarkus-awt registers the others)
             "sun.java2d.loops.XorCopyArgbToAny",
             "sun.java2d.loops.XorDrawGlyphListAAANY",
@@ -247,6 +275,18 @@ public final class AwtClassesAndResources {
             "javax.imageio.spi.ImageReaderWriterSpi#getFileSuffixes()",
             "javax.imageio.spi.ImageReaderWriterSpi#getFormatNames()",
             "javax.imageio.spi.ImageReaderWriterSpi#getMIMETypes()",
+
+            // ImageIO : the metadata formats of the JDK plugins, loaded by name (ImageReaderWriterSpi.getImageMetadataFormat,
+            // getStreamMetadataFormat, IIOMetadata.getMetadataFormat)
+            "com.sun.imageio.plugins.bmp.BMPMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.gif.GIFImageMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.gif.GIFStreamMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.jpeg.JPEGImageMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.jpeg.JPEGStreamMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.png.PNGMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.tiff.TIFFImageMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.tiff.TIFFStreamMetadataFormat#getInstance()",
+            "com.sun.imageio.plugins.wbmp.WBMPMetadataFormat#getInstance()",
 
             // Swing core, basic look and feel : UI delegates (UIDefaults creates them with reflection)
             "javax.swing.plaf.basic.BasicButtonUI#createUI(javax.swing.JComponent)",
@@ -398,8 +438,12 @@ public final class AwtClassesAndResources {
             "com.sun.media.sound.MidiOutDeviceProvider",
             "com.sun.media.sound.Platform",
             "com.sun.media.sound.PortMixer",
+            "com.sun.media.sound.PortMixer$BoolCtrl",
+            "com.sun.media.sound.PortMixer$CompCtrl",
+            "com.sun.media.sound.PortMixer$FloatCtrl",
             "com.sun.media.sound.PortMixerProvider",
             "com.sun.media.sound.PortMixerProvider$PortMixerInfo",
+            "javax.sound.sampled.Control",
 
             // AWT (natives and callbacks of the toolkit and the peers, exceptions thrown by native code)
             "java.awt.AWTError",
@@ -685,8 +729,19 @@ public final class AwtClassesAndResources {
             "java.lang.Boolean#getBoolean(java.lang.String)",
             "java.lang.Enum#name()",
             "java.lang.Thread#currentThread()",
+            "java.math.BigInteger#<init>(byte[])",
             "java.util.ArrayList#<init>(int)",
             "java.util.ArrayList#add(java.lang.Object)",
+
+            // exceptions thrown by native code (JNU_ThrowByName, FindClass and ThrowNew, or created with a constructor) that
+            // GraalVM does not register : it registers the (String) constructor of the common java.lang and java.io
+            // exceptions only. Without them, a NoClassDefFoundError or a NoSuchMethodError replaces the exception
+            "java.lang.IllegalArgumentException#<init>(java.lang.String,java.lang.Throwable)",
+            "java.lang.IllegalStateException#<init>(java.lang.String)",
+            "javax.sound.midi.MidiUnavailableException#<init>(java.lang.String)",
+
+            // Java Sound : the controls of the ports (PortMixer.nGetControls) are added to a vector
+            "java.util.Vector#addElement(java.lang.Object)",
 
             // Java2D pipes : the native span filler flushes the render queue (Direct3D, OpenGL) when it is full. The
             // method is inherited : the registration of the render queue classes does not cover it
@@ -696,8 +751,24 @@ public final class AwtClassesAndResources {
     static String[] WINDOWS_JNI_RUNTIME_ACCESS_METHODS = {
             // java.base methods called from native code
             "java.lang.System#getProperty(java.lang.String)",
-            "java.math.BigInteger#<init>(byte[])",
             "java.util.Locale#forLanguageTag(java.lang.String)",
+
+            // exceptions created by native code (the error of a peer that could not be created)
+            "java.lang.InternalError#<init>()",
+            "java.lang.OutOfMemoryError#<init>()",
+
+            // drag and drop : the native code calls these methods on the Windows peers (WDragSourceContextPeer,
+            // WDropTargetContextPeer), which inherit them : the registration of the peer classes does not cover them
+            "sun.awt.dnd.SunDragSourceContextPeer#dragDropFinished(boolean,int,int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragEnter(int,int,int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragExit(int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragMotion(int,int,int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragMouseMoved(int,int,int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#operationChanged(int,int,int,int)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleDropMessage(java.awt.Component,int,int,int,int,long[],long)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleEnterMessage(java.awt.Component,int,int,int,int,long[],long)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleExitMessage(java.awt.Component,long)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleMotionMessage(java.awt.Component,int,int,int,int,long[],long)",
     };
 
     static String[] LINUX_JNI_RUNTIME_ACCESS_METHODS = {
@@ -777,6 +848,18 @@ public final class AwtClassesAndResources {
     static String[] RESOURCE_BUNDLES = {
             // toolkit (key names, input methods)
             "sun.awt.resources.awt",
+
+            // ImageIO : the descriptions of the metadata formats (IIOMetadataFormat.getElementDescription...) and the
+            // warnings of the JPEG plugin
+            "com.sun.imageio.plugins.bmp.BMPMetadataFormatResources",
+            "com.sun.imageio.plugins.common.StandardMetadataFormatResources",
+            "com.sun.imageio.plugins.gif.GIFImageMetadataFormatResources",
+            "com.sun.imageio.plugins.gif.GIFStreamMetadataFormatResources",
+            "com.sun.imageio.plugins.jpeg.JPEGImageMetadataFormatResources",
+            "com.sun.imageio.plugins.jpeg.JPEGImageReaderResources",
+            "com.sun.imageio.plugins.jpeg.JPEGImageWriterResources",
+            "com.sun.imageio.plugins.jpeg.JPEGStreamMetadataFormatResources",
+            "com.sun.imageio.plugins.png.PNGMetadataFormatResources",
 
             // print and page dialogs
             "sun.print.resources.serviceui",

@@ -36,6 +36,7 @@ import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.SystemFlavorMap;
+import java.awt.font.TextAttribute;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
@@ -43,6 +44,8 @@ import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,6 +56,10 @@ import java.util.concurrent.TimeUnit;
 
 import javax.accessibility.AccessibleContext;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.ImageWriter;
+import javax.imageio.metadata.IIOMetadataFormat;
+import javax.imageio.metadata.IIOMetadataFormatImpl;
 import javax.print.DocFlavor;
 import javax.print.DocPrintJob;
 import javax.print.PrintService;
@@ -118,6 +125,8 @@ public class AwtItMain implements QuarkusApplication {
         check("java2d", AwtItMain::java2d);
         check("fonts", AwtItMain::fonts);
         check("imageio", AwtItMain::imageio);
+        check("imageio-plugins", AwtItMain::imageioPlugins);
+        check("text-attributes", AwtItMain::textAttributes);
         check("print-stream", AwtItMain::printStream);
         check("print-services", () -> {
             PrintService[] services = PrintServiceLookup.lookupPrintServices(null, null);
@@ -256,6 +265,42 @@ public class AwtItMain implements QuarkusApplication {
             }
         }
         return result.toString().trim();
+    }
+
+    /**
+     * The JDK plugins looked up by name : the writer of a reader and the reader of a writer, the metadata formats and
+     * their descriptions (resource bundles).
+     */
+    private static Object imageioPlugins() throws Exception {
+        StringBuilder result = new StringBuilder();
+        for (String format : new String[] { "png", "jpeg", "gif", "bmp", "wbmp", "tiff" }) {
+            ImageReader reader = ImageIO.getImageReadersByFormatName(format).next();
+            ImageWriter writer = ImageIO.getImageWriter(reader);
+            require(writer != null, "no writer for the " + format + " reader");
+            require(ImageIO.getImageReader(writer) != null, "no reader for the " + format + " writer");
+            IIOMetadataFormat metadataFormat = reader.getOriginatingProvider().getImageMetadataFormat(
+                    reader.getOriginatingProvider().getNativeImageMetadataFormatName());
+            require(metadataFormat != null, "no " + format + " metadata format");
+            result.append(format).append('=').append(metadataFormat.getRootName()).append(' ');
+        }
+        String description = IIOMetadataFormatImpl.getStandardFormatInstance().getElementDescription("Chroma",
+                Locale.ENGLISH);
+        require(description != null, "no description of the standard metadata format");
+        return result.append("standard=").append(description.replace(' ', '_')).toString();
+    }
+
+    /**
+     * The text attributes are serializable : the constant is read back.
+     */
+    private static Object textAttributes() throws Exception {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (ObjectOutputStream out = new ObjectOutputStream(bytes)) {
+            out.writeObject(TextAttribute.KERNING);
+        }
+        try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+            require(in.readObject() == TextAttribute.KERNING, "TextAttribute.KERNING not read back");
+        }
+        return "serialized=" + bytes.size();
     }
 
     // ------------------------------------------------------------------------------------------------------- printing
