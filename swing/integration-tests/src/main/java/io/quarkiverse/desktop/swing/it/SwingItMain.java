@@ -1,58 +1,45 @@
 package io.quarkiverse.desktop.swing.it;
 
-import java.awt.Dimension;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
-import java.util.concurrent.atomic.AtomicReference;
+import java.nio.file.Path;
 
-import javax.swing.JButton;
-import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
+import io.quarkus.runtime.ImageMode;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 
 /**
- * Runs the scenario named by the first argument, prints its result, and exits.
+ * Runs the scenario named by the first argument, prints its results, and exits with 1 when a check failed.
+ * <p>
+ * Scenarios :
+ * <ul>
+ * <li>{@code swing [directory]} : the Swing checks ({@link SwingChecks}). The rendered images and the defaults of the
+ * look and feels are written to the directory (the temporary directory by default).</li>
+ * <li>{@code look-and-feel} : the look and feel set at startup ({@code quarkus.desktop.swing.look-and-feel}).</li>
+ * </ul>
  */
 @QuarkusMain
 public class SwingItMain implements QuarkusApplication {
 
     @Override
     public int run(String... args) throws Exception {
-        String scenario = args.length > 0 ? args[0] : "paint";
+        // Set by the extension at startup, before the application runs
+        String startupLookAndFeel = UIManager.getLookAndFeel().getClass().getName();
+        String scenario = args.length > 0 ? args[0] : "swing";
         switch (scenario) {
-            case "paint" -> {
-                // paints a button into an image, on the event dispatch thread, without showing any window
-                AtomicReference<String> result = new AtomicReference<>();
-                SwingUtilities.invokeAndWait(() -> {
-                    JButton button = new JButton("Quarkus");
-                    Dimension size = button.getPreferredSize();
-                    button.setSize(size);
-                    button.doLayout();
-                    BufferedImage image = new BufferedImage(size.width, size.height, BufferedImage.TYPE_INT_ARGB);
-                    Graphics2D g = image.createGraphics();
-                    button.paint(g);
-                    g.dispose();
-                    result.set("swing-ok painted=" + isPainted(image));
-                });
-                System.out.println(result.get());
+            case "swing" -> {
+                Path directory = Path.of(args.length > 1 ? args[1] : System.getProperty("java.io.tmpdir"));
+                String mode = ImageMode.current().isNativeImage() ? "native" : "jvm";
+                return new SwingChecks(directory, mode, startupLookAndFeel).run();
+            }
+            case "look-and-feel" -> {
+                System.out.println("startupLookAndFeel=" + startupLookAndFeel);
+                return 0;
             }
             default -> {
-                System.out.println("unknown scenario " + scenario);
-                return 1;
+                System.out.println("Unknown scenario " + scenario);
+                return 2;
             }
         }
-        return 0;
-    }
-
-    private static boolean isPainted(BufferedImage image) {
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                if ((image.getRGB(x, y) >>> 24) != 0) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }

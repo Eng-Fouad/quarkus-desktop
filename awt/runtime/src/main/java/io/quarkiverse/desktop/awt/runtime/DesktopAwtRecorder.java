@@ -1,11 +1,15 @@
 package io.quarkiverse.desktop.awt.runtime;
 
+import java.awt.AWTEvent;
+import java.awt.EventQueue;
+import java.awt.Toolkit;
 import java.awt.Window;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.EmptyStackException;
 
 import org.jboss.logging.Logger;
 
@@ -118,14 +122,72 @@ public class DesktopAwtRecorder {
     }
 
     static void disposeWindows() {
-        // Do not start the AWT toolkit to dispose windows that cannot exist : the toolkit starts threads named "AWT-..."
-        if (Thread.getAllStackTraces().keySet().stream().noneMatch(thread -> thread.getName().startsWith("AWT-"))) {
+        // Do not start the AWT toolkit to dispose windows that cannot exist
+        if (!isToolkitStarted()) {
             return;
         }
         for (Window window : Window.getWindows()) {
             if (window.isDisplayable()) {
                 LOGGER.debugf("Disposing %s", window);
                 window.dispose();
+            }
+        }
+    }
+
+    /**
+     * Whether the AWT toolkit started : it starts threads named "AWT-...".
+     */
+    static boolean isToolkitStarted() {
+        return Thread.getAllStackTraces().keySet().stream().anyMatch(thread -> thread.getName().startsWith("AWT-"));
+    }
+
+    /**
+     * Dispatches the AWT events with the class loader of the application (dev and test modes) until it stops.
+     * <p>
+     * The event dispatch thread gets the context class loader of the application that started AWT first, and keeps it
+     * for the life of the JVM : after a live reload in dev mode, or in a test running another application, Swing would
+     * load the classes it finds by name on the event dispatch thread (look and feels, editor kits, Synth objects...)
+     * with the class loader of a stopped application.
+     */
+    public void useApplicationClassLoaderOnEventDispatchThread(ShutdownContext shutdownContext) {
+        ApplicationEventQueue queue = new ApplicationEventQueue(Thread.currentThread().getContextClassLoader());
+        try {
+            Toolkit.getDefaultToolkit().getSystemEventQueue().push(queue);
+        } catch (RuntimeException | Error e) {
+            LOGGER.debugf(e, "Unable to install the application event queue");
+            return;
+        }
+        shutdownContext.addShutdownTask(queue::remove);
+    }
+
+    /**
+     * Dispatches the events with the class loader of an application.
+     */
+    static final class ApplicationEventQueue extends EventQueue {
+
+        private final ClassLoader classLoader;
+
+        ApplicationEventQueue(ClassLoader classLoader) {
+            this.classLoader = classLoader;
+        }
+
+        @Override
+        protected void dispatchEvent(AWTEvent event) {
+            Thread thread = Thread.currentThread();
+            if (thread.getContextClassLoader() != classLoader) {
+                thread.setContextClassLoader(classLoader);
+            }
+            super.dispatchEvent(event);
+        }
+
+        /**
+         * Stops dispatching events : the pending events go to the previous event queue.
+         */
+        void remove() {
+            try {
+                pop();
+            } catch (EmptyStackException e) {
+                // already removed
             }
         }
     }

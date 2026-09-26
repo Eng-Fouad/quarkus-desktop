@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A Synth look and feel : styles, fonts, colors, images, an application painter and objects decoded as beans -->
+<synth>
+    <!-- Objects created by the beans decoder (reflection on their constructors and fields) -->
+    <object id="gridColor" class="javax.swing.plaf.ColorUIResource">
+        <int>200</int>
+        <int>210</int>
+        <int>220</int>
+    </object>
+    <object id="focusColor" class="java.awt.Color" field="ORANGE"/>
+    <object id="glossy" class="io.quarkiverse.desktop.swing.it.GlossyPainter"/>
+    <object id="textBorderInsets" class="javax.swing.plaf.InsetsUIResource">
+        <int>3</int>
+        <int>5</int>
+        <int>3</int>
+        <int>5</int>
+    </object>
+
+    <defaultsProperty key="Table.gridColor" type="idref" value="gridColor"/>
+    <defaultsProperty key="Quarkus.focusColor" type="idref" value="focusColor"/>
+    <defaultsProperty key="Quarkus.name" type="string" value="Synth Quarkus"/>
+    <defaultsProperty key="Quarkus.rowHeight" type="integer" value="22"/>
+
+    <imageIcon id="check" path="synth/check.png"/>
+
+    <style id="default">
+        <font name="Dialog" size="12"/>
+        <opaque value="true"/>
+        <state>
+            <color value="#F4F7FB" type="BACKGROUND"/>
+            <color value="#0D1C2C" type="FOREGROUND"/>
+            <color value="#0D1C2C" type="javax.swing.plaf.synth.ColorType.TEXT_FOREGROUND"/>
+            <color value="#FFFFFF" type="TEXT_BACKGROUND"/>
+        </state>
+        <painter idref="glossy" method="panelBackground"/>
+    </style>
+    <bind style="default" type="region" key=".*"/>
+
+    <style id="button">
+        <insets top="4" left="10" bottom="4" right="10"/>
+        <font name="Dialog" size="12" style="BOLD"/>
+        <state>
+            <color value="#FFFFFF" type="TEXT_FOREGROUND"/>
+        </state>
+        <state value="MOUSE_OVER">
+            <color value="#FFFF00" type="TEXT_FOREGROUND"/>
+        </state>
+        <painter idref="glossy" method="buttonBackground"/>
+        <property key="Button.textShiftOffset" type="integer" value="1"/>
+    </style>
+    <bind style="button" type="region" key="Button"/>
+
+    <style id="toggle">
+        <insets top="4" left="10" bottom="4" right="10"/>
+        <imagePainter method="toggleButtonBackground" path="synth/toggle.png" sourceInsets="2 2 2 2" paintCenter="true"/>
+    </style>
+    <bind style="toggle" type="region" key="ToggleButton"/>
+
+    <style id="checkBox">
+        <property key="CheckBox.icon" type="idref" value="check"/>
+    </style>
+    <bind style="checkBox" type="region" key="CheckBox"/>
+
+    <style id="text">
+        <property key="TextField.margin" type="idref" value="textBorderInsets"/>
+        <property key="TextField.caretAspectRatio" type="string" value="0.1"/>
+        <inputMap id="textKeys">
+            <bindKey key="ctrl A" action="select-all"/>
+            <bindKey key="ctrl C" action="copy-to-clipboard"/>
+        </inputMap>
+        <property key="TextField.focusInputMap" type="idref" value="textKeys"/>
+    </style>
+    <bind style="text" type="region" key="TextField"/>
+
+    <style id="named">
+        <state>
+            <color value="#4269E1" type="BACKGROUND"/>
+        </state>
+        <property key="Quarkus.named" type="boolean" value="true"/>
+        <property key="Quarkus.size" type="dimension" value="24 12"/>
+    </style>
+    <bind style="named" type="name" key="quarkus.*"/>
+</synth>

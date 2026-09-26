@@ -79,6 +79,7 @@ Native executables need GraalVM for JDK 25 and Quarkus {quarkus-version} or late
 == Guides
 
 * xref:awt.adoc[Desktop AWT]: how the extensions work, writing a desktop application, and building native executables.
+* xref:swing.adoc[Desktop Swing]: look and feels, text, Synth, and what Swing applications need in native executables.
 
 == Configuration
 

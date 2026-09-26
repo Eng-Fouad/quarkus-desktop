@@ -79,6 +79,11 @@ In dev mode, the application restarts in the same JVM: the AWT toolkit and its t
 previous run are disposed when the application stops. Global AWT and Swing state also stays (for instance the look and
 feel set with `UIManager.setLookAndFeel`).
 
+The event dispatch thread stays too, and AWT gives it the class loader of the application that started AWT first. In
+dev mode and in tests (several applications in the same JVM), the extension makes it dispatch the events with the class
+loader of the running application, so that the classes loaded by name on the event dispatch thread (for instance a look
+and feel or an editor kit of the application) are the ones of the running application.
+
 == Native executables
 
 Build a native executable as usual (`./mvnw package -Dnative`). The JDK AWT libraries are not linked in the executable:
