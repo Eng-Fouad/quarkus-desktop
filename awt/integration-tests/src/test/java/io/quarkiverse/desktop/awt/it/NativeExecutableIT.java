@@ -82,7 +82,7 @@ public class NativeExecutableIT {
         for (Path jar : jars) {
             try (ZipFile zip = new ZipFile(jar.toFile())) {
                 for (String entry : List.of("Target_sun_awt_windows_WObjectPeer", "Target_sun_java2d_windows_WindowsFlags",
-                        "Target_sun_awt_windows_WToolkit")) {
+                        "Target_sun_awt_windows_WToolkit", "Target_sun_font_Type1Font")) {
                     assertTrue(zip.getEntry("io/quarkus/awt/runtime/" + entry + ".class") == null, entry + " in " + jar);
                 }
                 assertTrue(zip.getEntry("io/quarkus/awt/runtime/JDKSubstitutions.class") != null,

@@ -18,7 +18,8 @@ import io.quarkus.maven.dependency.ResolvedDependency;
 import io.quarkus.maven.dependency.ResolvedDependencyBuilder;
 
 /**
- * The guard against quarkus-awt Windows substitutions that the extension does not remove (renamed or new ones).
+ * The guard against quarkus-awt substitutions of the Windows AWT classes or of Type 1 fonts that the extension does not
+ * remove (renamed or new ones).
  */
 class QuarkusAwtGuardTest {
 
@@ -31,8 +32,11 @@ class QuarkusAwtGuardTest {
                 "io/quarkus/awt/runtime/Target_sun_awt_FontConfiguration_Windows.class",
                 "io/quarkus/awt/runtime/Target_sun_awt_windows_WObjectPeer.class",
                 "io/quarkus/awt/runtime/Target_sun_java2d_windows_WindowsFlags.class",
-                "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class");
-        assertEquals(List.of(), DesktopAwtProcessor.unknownWindowsSubstitutions(quarkusAwt));
+                "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class",
+                "io/quarkus/awt/runtime/Target_sun_font_Type1Font.class",
+                "io/quarkus/awt/runtime/Target_sun_awt_FontConfiguration_Linux.class",
+                "io/quarkus/awt/runtime/Target_sun_awt_im_CompositionAreaHandler.class");
+        assertEquals(List.of(), DesktopAwtProcessor.unknownSubstitutions(quarkusAwt));
     }
 
     @Test
@@ -41,7 +45,15 @@ class QuarkusAwtGuardTest {
                 "io/quarkus/awt/runtime/Target_sun_awt_windows_WObjectPeer_Headless.class",
                 "io/quarkus/awt/runtime/Target_sun_java2d_windows_WindowsFlags.class");
         assertEquals(List.of("io/quarkus/awt/runtime/Target_sun_awt_windows_WObjectPeer_Headless.class"),
-                DesktopAwtProcessor.unknownWindowsSubstitutions(quarkusAwt));
+                DesktopAwtProcessor.unknownSubstitutions(quarkusAwt));
+    }
+
+    @Test
+    void renamedType1FontSubstitution() throws IOException {
+        ResolvedDependency quarkusAwt = quarkusAwt("io/quarkus/awt/runtime/JDKSubstitutions.class",
+                "io/quarkus/awt/runtime/Target_sun_font_Type1Font_NotSupported.class");
+        assertEquals(List.of("io/quarkus/awt/runtime/Target_sun_font_Type1Font_NotSupported.class"),
+                DesktopAwtProcessor.unknownSubstitutions(quarkusAwt));
     }
 
     private ResolvedDependency quarkusAwt(String... entries) throws IOException {

@@ -80,9 +80,10 @@ class DesktopAwtProcessor {
     static final String QUARKUS_AWT_ARTIFACT_ID = "quarkus-awt";
 
     /**
-     * The Windows substitutions of {@code io.quarkus:quarkus-awt} (headless only) that break AWT GUI applications. The
-     * other substitutions (the {@code JDKSubstitutions} marker class, which Quarkus core checks, the font configuration,
-     * Type 1 fonts, input methods of JDK 21) stay.
+     * The substitutions of {@code io.quarkus:quarkus-awt} (headless Java2D) that break AWT GUI applications or disable a
+     * feature of AWT : the Windows AWT substitutions, and the Type 1 font substitution. The other substitutions (the
+     * {@code JDKSubstitutions} marker class, which Quarkus core checks, the font configuration, input methods of JDK 21)
+     * stay.
      */
     static final List<String> QUARKUS_AWT_GUI_BLOCKERS = List.of(
             // WObjectPeer.initIDs() does nothing : every heavyweight peer (window, component, tray icon) crashes
@@ -90,7 +91,12 @@ class DesktopAwtProcessor {
             // WindowsFlags.initNativeFlags() returns false : no DPI awareness, Direct3D flags ignored
             "io/quarkus/awt/runtime/Target_sun_java2d_windows_WindowsFlags.class",
             // WToolkit.getPrintJob(...) throws : no AWT print jobs (Toolkit.getPrintJob)
-            "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class");
+            "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class",
+            // Type1Font.verifyPFA/verifyPFB throw (on every platform) : no Type 1 fonts (.pfa and .pfb files,
+            // Font.createFont(Font.TYPE1_FONT, ...), and the Type 1 fonts of the system on Linux). Native executables
+            // read them as the JDK does, with the freetype library of the JDK, which supports them, and the JNI callback
+            // Type1Font.readFile that quarkus-awt registers
+            "io/quarkus/awt/runtime/Target_sun_font_Type1Font.class");
 
     private static final DotName COMPONENT = DotName.createSimple("java.awt.Component");
     private static final DotName AWT_EVENT = DotName.createSimple("java.awt.AWTEvent");
@@ -112,11 +118,11 @@ class DesktopAwtProcessor {
         if (dependency.isPresent()) {
             quarkusAwt = dependency.get().getKey();
             // The substitutions are private classes of quarkus-awt : one renamed or added would break GUI applications
-            List<String> unknown = unknownWindowsSubstitutions(dependency.get());
+            List<String> unknown = unknownSubstitutions(dependency.get());
             if (!unknown.isEmpty()) {
-                LOGGER.warnf("%s %s has Windows substitutions that Quarkus Desktop AWT does not know : %s. They may break"
-                        + " AWT GUI applications in native executables built on Windows (for instance make AWT windows"
-                        + " crash) : please report it to the Quarkus Desktop project.",
+                LOGGER.warnf("%s %s has substitutions of the Windows AWT classes or of Type 1 fonts that Quarkus Desktop"
+                        + " AWT does not know : %s. They may break AWT GUI applications in native executables (for"
+                        + " instance make AWT windows crash on Windows) : please report it to the Quarkus Desktop project.",
                         quarkusAwt.toGacString(), dependency.get().getVersion(), unknown);
             }
         }
@@ -124,15 +130,16 @@ class DesktopAwtProcessor {
     }
 
     /**
-     * The substitutions of JDK Windows classes ({@code sun.awt.windows}, {@code sun.java2d.windows}) of quarkus-awt that
-     * are not removed.
+     * The substitutions of quarkus-awt that are not removed, of JDK Windows classes ({@code sun.awt.windows},
+     * {@code sun.java2d.windows}) or of the Type 1 fonts ({@code sun.font.Type1Font}).
      */
-    static List<String> unknownWindowsSubstitutions(ResolvedDependency dependency) {
+    static List<String> unknownSubstitutions(ResolvedDependency dependency) {
         List<String> unknown = new ArrayList<>();
         try {
             dependency.getContentTree().walk(visit -> {
                 String name = visit.getRelativePath("/");
-                if (name.startsWith("io/quarkus/awt/runtime/Target_") && name.contains("_windows_")
+                if (name.startsWith("io/quarkus/awt/runtime/Target_")
+                        && (name.contains("_windows_") || name.contains("Type1Font"))
                         && name.endsWith(".class") && !QUARKUS_AWT_GUI_BLOCKERS.contains(name)) {
                     unknown.add(name);
                 }

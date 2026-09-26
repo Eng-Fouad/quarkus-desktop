@@ -21,10 +21,11 @@ the native components, the Java2D surfaces of the screen, printing, data transfe
 integration, sound and accessibility, for Windows and Linux.
 * The parts of Swing that AWT itself uses (the print and page dialogs, the input method windows, and on Linux the text
 components): AWT applications do not need `quarkus-desktop-swing`.
-* The removal of three Windows substitutions of `quarkus-awt` that break GUI applications (`sun.awt.windows.WObjectPeer`,
-`sun.java2d.windows.WindowsFlags` and `sun.awt.windows.WToolkit`, which make every window crash, disable DPI awareness,
-and disable AWT print jobs). The build logs a warning if a `quarkus-awt` version has other substitutions of the Windows
-AWT classes (for instance renamed ones).
+* The removal of four substitutions of `quarkus-awt` (made for headless Java2D) that break GUI applications or disable an
+AWT feature: the Windows substitutions of `sun.awt.windows.WObjectPeer`, `sun.java2d.windows.WindowsFlags` and
+`sun.awt.windows.WToolkit`, which make every window crash, disable DPI awareness, and disable AWT print jobs, and the
+substitution of `sun.font.Type1Font`, which rejects Type 1 fonts (see <<fonts>>). The build logs a warning if a
+`quarkus-awt` version has other substitutions of the Windows AWT classes or of Type 1 fonts (for instance renamed ones).
 * Run time initialization of the JDK desktop packages, and of the *application classes whose static initializer uses
 them*: a class with a `static final Color ACCENT = new Color(0x0096c9)` (or a `Font`, an icon, a border...) is
 initialized at run time, as in JVM mode, instead of failing the native build.
@@ -131,6 +132,7 @@ Native executables are DPI aware by default, as a JVM started by the `java` laun
 the scale factor of the display (`sun.java2d.dpiaware` defaults to `true`, and the manifest declares per monitor DPI
 awareness). Set `quarkus.desktop.awt.windows.dpi-aware=false` to let Windows stretch the windows instead.
 
+[[fonts]]
 === Fonts and languages
 
 On Windows, the logical fonts (`Dialog`, `SansSerif`, `Serif`, `Monospaced`, `DialogInput`) use the font configuration of
@@ -141,7 +143,9 @@ selects the Latin only font configuration of `quarkus-awt`. On Linux, fonts come
 The resource bundles of AWT (key names, print dialog...) are included for the locales of the native executable: set
 `quarkus.locales` (and `quarkus.default-locale`) to the languages of the application.
 
-`quarkus-awt` does not support Type 1 fonts (`.pfa`, `.pfb`) in native executables.
+Type 1 fonts (`.pfa`, `.pfb` files, `Font.createFont(Font.TYPE1_FONT, ...)`) work as in JVM mode: native executables
+read them with the FreeType library of the JDK (`freetype.dll` on Windows), which supports them. `quarkus-awt` disables
+them (its substitution of `sun.font.Type1Font` rejects every Type 1 font): the extension removes that substitution.
 
 === Accessibility (Windows)
 

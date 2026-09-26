@@ -16,8 +16,8 @@ import io.quarkus.deployment.builditem.RemovedResourceBuildItem;
 import io.quarkus.test.QuarkusExtensionTest;
 
 /**
- * The Windows substitutions of quarkus-awt that break GUI applications are removed from the application (the native
- * integration tests check that the native build does not get them).
+ * The substitutions of quarkus-awt that break GUI applications (Windows AWT classes) or disable Type 1 fonts are removed
+ * from the application (the native integration tests check that the native build does not get them).
  */
 class QuarkusAwtGuiBlockersTest {
 
@@ -30,8 +30,8 @@ class QuarkusAwtGuiBlockersTest {
     @RegisterExtension
     static final QuarkusExtensionTest TEST = new QuarkusExtensionTest()
             .withEmptyApplication()
-            // The quarkus-awt version of the build has no other Windows substitution
-            .setLogRecordPredicate(r -> DesktopAwtTest.message(r).contains("Windows substitutions"))
+            // The quarkus-awt version of the build has no other substitution of the Windows AWT classes or of Type 1 fonts
+            .setLogRecordPredicate(r -> DesktopAwtTest.message(r).contains("Quarkus Desktop AWT does not know"))
             .assertLogRecords(records -> assertTrue(records.isEmpty(), records.toString()))
             .addBuildChainCustomizer(chain -> chain.addBuildStep(new BuildStep() {
                 @Override
@@ -53,6 +53,7 @@ class QuarkusAwtGuiBlockersTest {
         assertEquals(String.join(",", new TreeSet<>(Set.of(
                 "io/quarkus/awt/runtime/Target_sun_awt_windows_WObjectPeer.class",
                 "io/quarkus/awt/runtime/Target_sun_java2d_windows_WindowsFlags.class",
-                "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class"))), System.getProperty(REMOVED));
+                "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class",
+                "io/quarkus/awt/runtime/Target_sun_font_Type1Font.class"))), System.getProperty(REMOVED));
     }
 }
