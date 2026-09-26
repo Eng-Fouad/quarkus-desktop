@@ -46,7 +46,9 @@ final class DesktopStaticInitializerScanner {
     static final List<String> DESKTOP_PACKAGES = List.of("java/awt/", "javax/swing/", "sun/awt/", "sun/java2d/",
             "sun/font/", "javax/imageio/", "com/sun/imageio/", "javax/print/", "sun/print/", "javax/sound/",
             "com/sun/media/sound/", "javax/accessibility/", "com/sun/java/accessibility/", "sun/swing/",
-            "com/sun/java/swing/", "jdk/swing/interop/");
+            "com/sun/java/swing/", "jdk/swing/interop/",
+            // macOS : the toolkit, the Aqua look and feel, the application events, the dock and the screen menu bar
+            "sun/lwawt/", "com/apple/", "apple/laf/");
 
     /**
      * GraalVM substitutions are never initialized.

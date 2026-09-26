@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.EmptyStackException;
 
 import org.jboss.logging.Logger;
@@ -39,6 +40,12 @@ public class DesktopAwtRecorder {
      * text with PostScript fonts.
      */
     public static final String POSTSCRIPT_FONTS = RESOURCES + "psfontj2d.properties";
+
+    /**
+     * The Metal shader library of the JDK used for the native build ({@code lib/shaders.metallib}, macOS), used by the
+     * Metal rendering pipeline of Java2D.
+     */
+    public static final String METAL_SHADERS = RESOURCES + "shaders.metallib";
 
     /**
      * The directory that {@code io.quarkus:quarkus-awt} uses as {@code java.home} in native executables, relative to
@@ -77,6 +84,9 @@ public class DesktopAwtRecorder {
                     System.setProperty("sun.awt.fontconfig", file.toString());
                 }
             }
+            // macOS : the shaders must match the libraries next to the executable, the directory is shared by every
+            // native executable (another one may have written the shaders of another JDK)
+            extractIfChanged(METAL_SHADERS, home.resolve("lib").resolve("shaders.metallib"));
         } catch (IOException | RuntimeException e) {
             LOGGER.warnf(e, "Unable to prepare the java.home directory of the native executable");
         }
@@ -109,6 +119,34 @@ public class DesktopAwtRecorder {
             } finally {
                 Files.deleteIfExists(copy);
             }
+        }
+        return true;
+    }
+
+    /**
+     * Extracts a resource to a file, unless the file has the same content.
+     *
+     * @return whether the resource exists
+     */
+    static boolean extractIfChanged(String resource, Path file) throws IOException {
+        byte[] data;
+        try (InputStream in = DesktopAwtRecorder.class.getClassLoader().getResourceAsStream(resource)) {
+            if (in == null) {
+                return false;
+            }
+            data = in.readAllBytes();
+        }
+        if (Files.isRegularFile(file) && Files.size(file) == data.length && Arrays.equals(Files.readAllBytes(file), data)) {
+            return true;
+        }
+        Files.createDirectories(file.getParent());
+        // Other processes may extract the same file at the same time : write a private copy, then move it
+        Path copy = Files.createTempFile(file.getParent(), file.getFileName().toString(), ".tmp");
+        try {
+            Files.write(copy, data);
+            Files.move(copy, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } finally {
+            Files.deleteIfExists(copy);
         }
         return true;
     }

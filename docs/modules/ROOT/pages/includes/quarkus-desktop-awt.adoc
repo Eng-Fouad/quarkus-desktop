@@ -170,5 +170,141 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-macos-park-main-thread]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-macos-park-main-thread[`+++quarkus.desktop.awt.macos.park-main-thread+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.macos.park-main-thread+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the first thread of the process runs the Cocoa event loop, as with the `java` launcher, the Quarkus application running on a new thread named `main`.
+
+AppKit, which AWT, Swing and JavaFX use on macOS, only runs on the first thread of the process : without this, the first window of an AWT or Swing application never shows. Disable it only with the Quarkus FX launcher, which then runs JavaFX on the first thread itself (AWT then runs embedded in JavaFX), or with a GraalVM version that keeps the first thread in the Cocoa event loop itself.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_MACOS_PARK_MAIN_THREAD+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_MACOS_PARK_MAIN_THREAD+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-macos-main-thread-stack-size]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-macos-main-thread-stack-size[`+++quarkus.desktop.awt.macos.main-thread-stack-size+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.macos.main-thread-stack-size+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The stack size of the thread that runs the Quarkus application (the first thread of a macOS process has 8 MiB, the other threads 512 KiB by default).
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_MACOS_MAIN_THREAD_STACK_SIZE+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_MACOS_MAIN_THREAD_STACK_SIZE+++`
+endif::add-copy-button-to-env-var[]
+--
+|MemorySize link:#memory-size-note-anchor-quarkus-desktop-awt_quarkus-desktop[icon:question-circle[title=More information about the MemorySize format]]
+|`+++8M+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-macos-exit-halt-timeout]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-macos-exit-halt-timeout[`+++quarkus.desktop.awt.macos.exit-halt-timeout+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.macos.exit-halt-timeout+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+How long `System.exit` may take once the application has stopped before the process is halted, `0` to wait for ever. A safety net against an exit that never completes while AppKit runs on the first thread.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_MACOS_EXIT_HALT_TIMEOUT+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_MACOS_EXIT_HALT_TIMEOUT+++`
+endif::add-copy-button-to-env-var[]
+--
+|link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html[Duration] link:#duration-note-anchor-quarkus-desktop-awt_quarkus-desktop[icon:question-circle[title=More information about the Duration format]]
+|`+++10S+++`
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-macos-application-name]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-macos-application-name[`+++quarkus.desktop.awt.macos.application-name+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.macos.application-name+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+The name of the application in the menu bar and the Dock : the default value of the `apple.awt.application.name` system property in the native executable (the `java` launcher sets it to the simple name of the main class). The Quarkus application name (`quarkus.application.name`) by default.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_MACOS_APPLICATION_NAME+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_MACOS_APPLICATION_NAME+++`
+endif::add-copy-button-to-env-var[]
+--
+|string
+|
+
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-macos-info-plist]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-macos-info-plist[`+++quarkus.desktop.awt.macos.info-plist+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.macos.info-plist+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether to embed an information property list (`Info.plist`) in the native executable, as the `java` launcher has one : bundle identifier, name and versions of the application, high resolution capability, and the description of the microphone use (Java Sound capture) that macOS shows when it asks the user for the permission.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_MACOS_INFO_PLIST+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_MACOS_INFO_PLIST+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++false+++`
+
 |===
 
+ifndef::no-duration-note[]
+[NOTE]
+[id=duration-note-anchor-quarkus-desktop-awt_quarkus-desktop]
+.About the Duration format
+====
+To write duration values, use the standard `java.time.Duration` format.
+See the link:https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html#parse(java.lang.CharSequence)[Duration#parse() Java API documentation] for more information.
+
+You can also use a simplified format, starting with a number:
+
+* If the value is only a number, it represents time in seconds.
+* If the value is a number followed by `ms`, it represents time in milliseconds.
+
+In other cases, the simplified format is translated to the `java.time.Duration` format for parsing:
+
+* If the value is a number followed by `h`, `m`, or `s`, it is prefixed with `PT`.
+* If the value is a number followed by `d`, it is prefixed with `P`.
+====
+endif::no-duration-note[]
+ifndef::no-memory-size-note[]
+[NOTE]
+[id=memory-size-note-anchor-quarkus-desktop-awt_quarkus-desktop]
+.About the MemorySize format
+====
+A size configuration option recognizes strings in this format (shown as a regular expression): `[0-9]+[KkMmGgTtPpEeZzYy]?`.
+
+If no suffix is given, assume bytes.
+====
+endif::no-memory-size-note[]

@@ -9,7 +9,9 @@
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 Quarkus extensions to build AWT and Swing desktop (GUI) applications, in JVM mode and as GraalVM native executables
-(Windows x64 and Linux x64; macOS in JVM mode only).
+(Windows x64, Linux x64, and macOS on Apple silicon). Native executables for macOS need the quarkus-awt of the Quarkus pull
+request [Enable quarkus-awt on macOS](https://github.com/quarkusio/quarkus/pull/56979) (not in a Quarkus release yet:
+build Quarkus from it) and GraalVM 25.1 or later.
 
 | Extension | Coordinates | Description |
 |---|---|---|
@@ -17,6 +19,13 @@ Quarkus extensions to build AWT and Swing desktop (GUI) applications, in JVM mod
 | Desktop Swing | `io.quarkiverse.desktop:quarkus-desktop-swing` | Swing components, the look and feels of the JDK (Metal, Nimbus, Synth, Windows, GTK, Motif), text, printing (includes Desktop AWT) |
 
 Please refer to the documentation available at https://docs.quarkiverse.io/quarkus-desktop/dev/index.html
+
+## Verifying on macOS
+
+The macOS support is unit tested on every platform, but it only runs on a Mac: the check list to run on an Apple
+silicon Mac, and how to report the results, is in [docs/modules/ROOT/pages/macos-verification.adoc](docs/modules/ROOT/pages/macos-verification.adoc).
+The unit tests also check the macOS lists against a macOS JDK on any platform:
+`./mvnw verify -pl awt/deployment,swing/deployment -am -Dmac.java.home=<an extracted macOS JDK>/Contents/Home`.
 
 ## Contributors ✨
 

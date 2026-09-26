@@ -17,12 +17,13 @@ public interface DesktopSwingConfig {
      * The look and feel set when the application starts, before it runs (on the event dispatch thread, in JVM mode and
      * in native executables).
      * <p>
-     * {@code system} (the look and feel of the platform : Windows on Windows, GTK on a GNOME desktop, Metal otherwise),
+     * {@code system} (the look and feel of the platform : Windows on Windows, Aqua on macOS, GTK on a GNOME desktop,
+     * Metal otherwise),
      * {@code cross-platform} (Metal), {@code metal}, {@code nimbus}, {@code motif}, {@code windows},
      * {@code windows-classic}, {@code gtk}, or the class name of a look and feel (an application look and feel, or a
-     * library one such as FlatLaf). When not set, Swing uses its default look and feel (Metal, unless the
-     * {@code swing.defaultlaf} system property sets another one), and the application can set the look and feel itself
-     * with {@code UIManager.setLookAndFeel}.
+     * library one such as FlatLaf). When not set, Swing uses its default look and feel (Aqua on macOS, Metal elsewhere,
+     * unless the {@code swing.defaultlaf} system property sets another one), and the application can set the look and
+     * feel itself with {@code UIManager.setLookAndFeel}.
      * <p>
      * A look and feel that this platform does not support (for instance {@code windows} on Linux) or that cannot be
      * created is reported as a warning, and the default look and feel is kept. The look and feel classes of the JDK are

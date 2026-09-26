@@ -69,7 +69,8 @@ jobs:
         run: ./mvnw -B -ntp clean install -Dno-format
 
   native:
-    # macOS is not a native target : GraalVM does not support AWT in native executables on macOS
+    # No macOS native job yet : macOS native executables need the quarkus-awt of the Quarkus pull request
+    # https://github.com/quarkusio/quarkus/pull/56979 (not in a Quarkus release yet) and GraalVM 25.1 or later
     name: Native on ${{ matrix.os }}
     strategy:
       fail-fast: false
