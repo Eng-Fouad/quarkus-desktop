@@ -16,8 +16,8 @@ import io.quarkus.deployment.builditem.RemovedResourceBuildItem;
 import io.quarkus.test.QuarkusExtensionTest;
 
 /**
- * The Windows substitutions of quarkus-awt that break GUI applications are removed from the application (the native
- * integration tests check that the native build does not get them).
+ * The Windows and macOS substitutions of quarkus-awt that break GUI applications are removed from the application (the
+ * native integration tests check that the native build does not get them).
  */
 class QuarkusAwtGuiBlockersTest {
 
@@ -30,8 +30,8 @@ class QuarkusAwtGuiBlockersTest {
     @RegisterExtension
     static final QuarkusExtensionTest TEST = new QuarkusExtensionTest()
             .withEmptyApplication()
-            // The quarkus-awt version of the build has no other Windows substitution
-            .setLogRecordPredicate(r -> DesktopAwtTest.message(r).contains("Windows substitutions"))
+            // The quarkus-awt version of the build has no other substitution
+            .setLogRecordPredicate(r -> DesktopAwtTest.message(r).contains("substitutions"))
             .assertLogRecords(records -> assertTrue(records.isEmpty(), records.toString()))
             .addBuildChainCustomizer(chain -> chain.addBuildStep(new BuildStep() {
                 @Override
@@ -53,6 +53,10 @@ class QuarkusAwtGuiBlockersTest {
         assertEquals(String.join(",", new TreeSet<>(Set.of(
                 "io/quarkus/awt/runtime/Target_sun_awt_windows_WObjectPeer.class",
                 "io/quarkus/awt/runtime/Target_sun_java2d_windows_WindowsFlags.class",
-                "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class"))), System.getProperty(REMOVED));
+                "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class",
+                "io/quarkus/awt/runtime/Target_sun_awt_PlatformGraphicsInfo_Mac.class",
+                "io/quarkus/awt/runtime/Target_sun_lwawt_macosx_LWCToolkit.class",
+                "io/quarkus/awt/runtime/Target_sun_awt_CGraphicsEnvironment.class",
+                "io/quarkus/awt/runtime/Target_sun_print_PlatformPrinterJobProxy.class"))), System.getProperty(REMOVED));
     }
 }

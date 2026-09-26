@@ -1,7 +1,11 @@
 package io.quarkiverse.desktop.awt.runtime;
 
+import java.time.Duration;
+import java.util.Optional;
+
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
+import io.quarkus.runtime.configuration.MemorySize;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 
@@ -102,6 +106,60 @@ public interface DesktopAwtConfig {
          */
         @WithDefault("jdk")
         FontConfiguration fontConfiguration();
+    }
+
+    /**
+     * Native executables built for macOS (a native build on a macOS host, not a container build).
+     */
+    Macos macos();
+
+    /**
+     * Native executables built for macOS (a native build on a macOS host, not a container build).
+     */
+    interface Macos {
+
+        /**
+         * Whether the first thread of the process runs the Cocoa event loop, as with the {@code java} launcher, the
+         * Quarkus application running on a new thread named {@code main}.
+         * <p>
+         * AppKit, which AWT, Swing and JavaFX use on macOS, only runs on the first thread of the process : without this,
+         * the first window of an AWT or Swing application never shows. Disable it only with the Quarkus FX launcher,
+         * which then runs JavaFX on the first thread itself (AWT then runs embedded in JavaFX), or with a GraalVM version
+         * that keeps the first thread in the Cocoa event loop itself.
+         */
+        @WithDefault("true")
+        boolean parkMainThread();
+
+        /**
+         * The stack size of the thread that runs the Quarkus application (the first thread of a macOS process has 8 MiB,
+         * the other threads 512 KiB by default).
+         */
+        @WithDefault("8M")
+        MemorySize mainThreadStackSize();
+
+        /**
+         * How long {@code System.exit} may take once the application has stopped before the process is halted, {@code 0}
+         * to wait for ever. A safety net against an exit that never completes while AppKit runs on the first thread.
+         */
+        @WithDefault("10s")
+        Duration exitHaltTimeout();
+
+        /**
+         * The name of the application in the menu bar and the Dock : the default value of the
+         * {@code apple.awt.application.name} system property in the native executable (the {@code java} launcher sets it
+         * to the simple name of the main class). The Quarkus application name ({@code quarkus.application.name}) by
+         * default.
+         */
+        Optional<String> applicationName();
+
+        /**
+         * Whether to embed an information property list ({@code Info.plist}) in the native executable, as the {@code java}
+         * launcher has one : bundle identifier, name and versions of the application, high resolution capability, and the
+         * description of the microphone use (Java Sound capture) that macOS shows when it asks the user for the
+         * permission.
+         */
+        @WithDefault("false")
+        boolean infoPlist();
     }
 
     /**

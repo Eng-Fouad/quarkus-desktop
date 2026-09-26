@@ -31,6 +31,7 @@ import io.quarkus.deployment.builditem.nativeimage.JniRuntimeAccessMethodBuildIt
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBundleBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourcePatternsBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveFieldBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
@@ -61,12 +62,14 @@ class DesktopSwingProcessor {
             BuildProducer<RuntimeInitializedClassBuildItem> classes) {
         for (String packageName : entries(platform, config, SwingClassesAndResources.RUNTIME_INITIALIZED_PACKAGES,
                 SwingClassesAndResources.WINDOWS_RUNTIME_INITIALIZED_PACKAGES,
-                SwingClassesAndResources.LINUX_RUNTIME_INITIALIZED_PACKAGES)) {
+                SwingClassesAndResources.LINUX_RUNTIME_INITIALIZED_PACKAGES,
+                SwingClassesAndResources.MAC_RUNTIME_INITIALIZED_PACKAGES)) {
             packages.produce(new RuntimeInitializedPackageBuildItem(packageName));
         }
         for (String className : entries(platform, config, SwingClassesAndResources.RUNTIME_INITIALIZED_CLASSES,
                 SwingClassesAndResources.WINDOWS_RUNTIME_INITIALIZED_CLASSES,
-                SwingClassesAndResources.LINUX_RUNTIME_INITIALIZED_CLASSES)) {
+                SwingClassesAndResources.LINUX_RUNTIME_INITIALIZED_CLASSES,
+                SwingClassesAndResources.MAC_RUNTIME_INITIALIZED_CLASSES)) {
             classes.produce(new RuntimeInitializedClassBuildItem(className));
         }
     }
@@ -76,21 +79,32 @@ class DesktopSwingProcessor {
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void reflection(DesktopTargetPlatformBuildItem platform, DesktopSwingBuildTimeConfig config,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
+            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
+            BuildProducer<ReflectiveFieldBuildItem> reflectiveFields) {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(entries(platform, config,
                 SwingClassesAndResources.REFLECTIVE_CLASSES,
                 SwingClassesAndResources.WINDOWS_REFLECTIVE_CLASSES,
-                SwingClassesAndResources.LINUX_REFLECTIVE_CLASSES)).methods().fields().reason(REASON).build());
+                SwingClassesAndResources.LINUX_REFLECTIVE_CLASSES,
+                SwingClassesAndResources.MAC_REFLECTIVE_CLASSES)).methods().fields().reason(REASON).build());
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(entries(platform, config,
                 SwingClassesAndResources.REFLECTIVE_CONSTRUCTORS,
                 SwingClassesAndResources.WINDOWS_REFLECTIVE_CONSTRUCTORS,
-                SwingClassesAndResources.LINUX_REFLECTIVE_CONSTRUCTORS)).reason(REASON).build());
+                SwingClassesAndResources.LINUX_REFLECTIVE_CONSTRUCTORS,
+                SwingClassesAndResources.MAC_REFLECTIVE_CONSTRUCTORS)).reason(REASON).build());
         for (String method : entries(platform, config, SwingClassesAndResources.REFLECTIVE_METHODS,
                 SwingClassesAndResources.WINDOWS_REFLECTIVE_METHODS,
-                SwingClassesAndResources.LINUX_REFLECTIVE_METHODS)) {
+                SwingClassesAndResources.LINUX_REFLECTIVE_METHODS,
+                SwingClassesAndResources.MAC_REFLECTIVE_METHODS)) {
             MemberEntry entry = MemberEntry.method(method);
             reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, false, entry.className(), entry.name(),
                     entry.parameterTypes()));
+        }
+        for (String field : entries(platform, config, SwingClassesAndResources.REFLECTIVE_FIELDS,
+                SwingClassesAndResources.WINDOWS_REFLECTIVE_FIELDS,
+                SwingClassesAndResources.LINUX_REFLECTIVE_FIELDS,
+                SwingClassesAndResources.MAC_REFLECTIVE_FIELDS)) {
+            MemberEntry entry = MemberEntry.field(field);
+            reflectiveFields.produce(new ReflectiveFieldBuildItem(REASON, entry.className(), entry.name()));
         }
     }
 
@@ -100,7 +114,8 @@ class DesktopSwingProcessor {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(entries(platform, config,
                 SwingClassesAndResources.SERVICE_PROVIDERS,
                 SwingClassesAndResources.WINDOWS_SERVICE_PROVIDERS,
-                SwingClassesAndResources.LINUX_SERVICE_PROVIDERS)).methods().reason(REASON).build());
+                SwingClassesAndResources.LINUX_SERVICE_PROVIDERS,
+                SwingClassesAndResources.MAC_SERVICE_PROVIDERS)).methods().reason(REASON).build());
     }
 
     /**
@@ -199,7 +214,8 @@ class DesktopSwingProcessor {
                     "com.sun.java.swing.plaf.windows.windowsclassiclookandfeel" ->
                 IncludedLookAndFeel.WINDOWS;
             case "gtk", "com.sun.java.swing.plaf.gtk.gtklookandfeel" -> IncludedLookAndFeel.GTK;
-            case "system" -> platform.select(IncludedLookAndFeel.WINDOWS, IncludedLookAndFeel.GTK);
+            // Aqua on macOS : registered by the Desktop AWT extension, always included
+            case "system" -> platform.select(IncludedLookAndFeel.WINDOWS, IncludedLookAndFeel.GTK, null);
             default -> null;
         });
     }
@@ -213,19 +229,22 @@ class DesktopSwingProcessor {
             BuildProducer<JniRuntimeAccessFieldBuildItem> jniFields) {
         String[] classes = entries(platform, config, SwingClassesAndResources.JNI_RUNTIME_ACCESS_CLASSES,
                 SwingClassesAndResources.WINDOWS_JNI_RUNTIME_ACCESS_CLASSES,
-                SwingClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_CLASSES);
+                SwingClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_CLASSES,
+                SwingClassesAndResources.MAC_JNI_RUNTIME_ACCESS_CLASSES);
         if (classes.length > 0) {
             jniClasses.produce(new JniRuntimeAccessBuildItem(true, true, true, classes));
         }
         for (String method : entries(platform, config, SwingClassesAndResources.JNI_RUNTIME_ACCESS_METHODS,
                 SwingClassesAndResources.WINDOWS_JNI_RUNTIME_ACCESS_METHODS,
-                SwingClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_METHODS)) {
+                SwingClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_METHODS,
+                SwingClassesAndResources.MAC_JNI_RUNTIME_ACCESS_METHODS)) {
             MemberEntry entry = MemberEntry.method(method);
             jniMethods.produce(new JniRuntimeAccessMethodBuildItem(entry.className(), entry.name(), entry.parameterTypes()));
         }
         for (String field : entries(platform, config, SwingClassesAndResources.JNI_RUNTIME_ACCESS_FIELDS,
                 SwingClassesAndResources.WINDOWS_JNI_RUNTIME_ACCESS_FIELDS,
-                SwingClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_FIELDS)) {
+                SwingClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_FIELDS,
+                SwingClassesAndResources.MAC_JNI_RUNTIME_ACCESS_FIELDS)) {
             MemberEntry entry = MemberEntry.field(field);
             jniFields.produce(new JniRuntimeAccessFieldBuildItem(entry.className(), entry.name()));
         }
@@ -239,14 +258,16 @@ class DesktopSwingProcessor {
             BuildProducer<NativeImageResourcePatternsBuildItem> resources) {
         for (String bundle : entries(platform, config, SwingClassesAndResources.RESOURCE_BUNDLES,
                 SwingClassesAndResources.WINDOWS_RESOURCE_BUNDLES,
-                SwingClassesAndResources.LINUX_RESOURCE_BUNDLES)) {
+                SwingClassesAndResources.LINUX_RESOURCE_BUNDLES,
+                SwingClassesAndResources.MAC_RESOURCE_BUNDLES)) {
             // Without module name : see the Desktop AWT extension
             bundles.produce(new NativeImageResourceBundleBuildItem(bundle));
         }
         resources.produce(NativeImageResourcePatternsBuildItem.builder()
                 .includeGlobs(entries(platform, config, SwingClassesAndResources.RESOURCE_GLOBS,
                         SwingClassesAndResources.WINDOWS_RESOURCE_GLOBS,
-                        SwingClassesAndResources.LINUX_RESOURCE_GLOBS))
+                        SwingClassesAndResources.LINUX_RESOURCE_GLOBS,
+                        SwingClassesAndResources.MAC_RESOURCE_GLOBS))
                 .build());
     }
 
@@ -266,8 +287,9 @@ class DesktopSwingProcessor {
      * The entries of a common list and of the list of the target platform, for the included look and feels.
      */
     private static String[] entries(DesktopTargetPlatformBuildItem platform, DesktopSwingBuildTimeConfig config,
-            String[] common, String[] windows, String[] linux) {
-        return new IncludedLookAndFeels(config.includedLookAndFeels()).filter(platform.withPlatform(common, windows, linux));
+            String[] common, String[] windows, String[] linux, String[] mac) {
+        return new IncludedLookAndFeels(config.includedLookAndFeels())
+                .filter(platform.withPlatform(common, windows, linux, mac));
     }
 
     private static boolean exists(String className) {

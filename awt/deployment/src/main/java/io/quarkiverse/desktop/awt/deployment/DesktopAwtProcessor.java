@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
@@ -25,21 +26,24 @@ import io.quarkiverse.desktop.awt.deployment.DesktopTargetPlatformBuildItem.Plat
 import io.quarkiverse.desktop.awt.runtime.DesktopAwtConfig;
 import io.quarkiverse.desktop.awt.runtime.DesktopAwtRecorder;
 import io.quarkiverse.desktop.awt.runtime.graal.DesktopAwtFeature;
+import io.quarkiverse.desktop.awt.runtime.macos.MacMainThread;
+import io.quarkiverse.desktop.awt.runtime.macos.ParkMainThreadEnabled;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
-import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.IsNormal;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.NativeImageEnableAllCharsetsBuildItem;
 import io.quarkus.deployment.builditem.NativeImageFeatureBuildItem;
+import io.quarkus.deployment.builditem.QuarkusApplicationClassBuildItem;
 import io.quarkus.deployment.builditem.RemovedResourceBuildItem;
 import io.quarkus.deployment.builditem.ServiceStartBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
@@ -51,9 +55,11 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageResourceBundleBuil
 import io.quarkus.deployment.builditem.nativeimage.NativeImageResourcePatternsBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.NativeImageSystemPropertyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveFieldBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.UnsupportedOSBuildItem;
 import io.quarkus.deployment.pkg.NativeConfig;
 import io.quarkus.deployment.pkg.builditem.ArtifactResultBuildItem;
 import io.quarkus.deployment.pkg.builditem.CurateOutcomeBuildItem;
@@ -84,13 +90,64 @@ class DesktopAwtProcessor {
      * other substitutions (the {@code JDKSubstitutions} marker class, which Quarkus core checks, the font configuration,
      * Type 1 fonts, input methods of JDK 21) stay.
      */
-    static final List<String> QUARKUS_AWT_GUI_BLOCKERS = List.of(
+    static final List<String> QUARKUS_AWT_WINDOWS_GUI_BLOCKERS = List.of(
             // WObjectPeer.initIDs() does nothing : every heavyweight peer (window, component, tray icon) crashes
             "io/quarkus/awt/runtime/Target_sun_awt_windows_WObjectPeer.class",
             // WindowsFlags.initNativeFlags() returns false : no DPI awareness, Direct3D flags ignored
             "io/quarkus/awt/runtime/Target_sun_java2d_windows_WindowsFlags.class",
             // WToolkit.getPrintJob(...) throws : no AWT print jobs (Toolkit.getPrintJob)
             "io/quarkus/awt/runtime/Target_sun_awt_windows_WToolkit.class");
+
+    /**
+     * The macOS substitutions of {@code io.quarkus:quarkus-awt} (Quarkus versions whose quarkus-awt supports macOS native
+     * executables, "Enable quarkus-awt on macOS") that force headless AWT. Absent from older versions : a name absent
+     * from the jar removes nothing. {@code Target_sun_awt_FontConfiguration_Mac} stays (the macOS font configuration
+     * stubs every lookup, its minimal {@code fontconfig.properties} is enough for GUI applications), and
+     * {@code Target_sun_awt_HeadlessToolkit} and {@code MacHeadless}, only used by the removed ones, are then inert.
+     */
+    static final List<String> QUARKUS_AWT_MAC_GUI_BLOCKERS = List.of(
+            // headless by default, createToolkit returns HeadlessToolkit(LWCToolkit), AWTError when headful
+            "io/quarkus/awt/runtime/Target_sun_awt_PlatformGraphicsInfo_Mac.class",
+            // initAppkit does nothing (AWTError when headful), getMultiClickTime returns 500, no NSImage:// images
+            "io/quarkus/awt/runtime/Target_sun_lwawt_macosx_LWCToolkit.class",
+            // rebuildDevices throws : no screen
+            "io/quarkus/awt/runtime/Target_sun_awt_CGraphicsEnvironment.class",
+            // PrinterJob.getPrinterJob throws
+            "io/quarkus/awt/runtime/Target_sun_print_PlatformPrinterJobProxy.class");
+
+    /**
+     * A class of the quarkus-awt versions that support macOS native executables (and have the macOS substitutions).
+     */
+    static final String QUARKUS_AWT_MAC_SENTINEL = "io/quarkus/awt/runtime/Target_sun_awt_FontConfiguration_Mac.class";
+
+    /**
+     * The substitutions of quarkus-awt that are kept, known not to break AWT GUI applications.
+     */
+    static final Set<String> QUARKUS_AWT_KNOWN_KEPT = Set.of(
+            "io/quarkus/awt/runtime/Target_sun_awt_FontConfiguration_Linux.class",
+            "io/quarkus/awt/runtime/Target_sun_awt_FontConfiguration_Mac.class",
+            "io/quarkus/awt/runtime/Target_sun_awt_FontConfiguration_Windows.class",
+            "io/quarkus/awt/runtime/Target_sun_awt_HeadlessToolkit.class",
+            "io/quarkus/awt/runtime/Target_sun_awt_im_CompositionAreaHandler.class",
+            "io/quarkus/awt/runtime/Target_sun_awt_im_ExecutableInputMethodManager.class",
+            "io/quarkus/awt/runtime/Target_sun_font_Type1Font.class");
+
+    static final String MAC_QUARKUS_TOO_OLD = "Quarkus Desktop needs a Quarkus version whose quarkus-awt supports macOS"
+            + " native executables (\"Enable quarkus-awt on macOS\") to build AWT and Swing applications natively on macOS,"
+            + " found quarkus-awt %s. JVM mode works with this version.";
+
+    /**
+     * The libraries a macOS native executable using AWT loads from its directory : copied there by GraalVM 25.1 and later
+     * ({@code libjava} and {@code libjvm} are shims generated by GraalVM).
+     */
+    static final List<String> MAC_REQUIRED_LIBRARIES = List.of("libawt.dylib", "libawt_lwawt.dylib", "libosxapp.dylib",
+            "libfontmanager.dylib", "libfreetype.dylib", "libjavajpeg.dylib", "liblcms.dylib", "libmlib_image.dylib",
+            "libjava.dylib", "libjvm.dylib");
+
+    /**
+     * The {@code QuarkusApplication} of the Quarkus FX launcher, which runs JavaFX on the first thread itself.
+     */
+    static final String QUARKUS_FX_APPLICATION = "io.quarkiverse.fx.QuarkusFxApplication";
 
     private static final DotName COMPONENT = DotName.createSimple("java.awt.Component");
     private static final DotName AWT_EVENT = DotName.createSimple("java.awt.AWTEvent");
@@ -104,53 +161,133 @@ class DesktopAwtProcessor {
 
     @BuildStep
     RemovedResourceBuildItem removeQuarkusAwtGuiBlockers(CurateOutcomeBuildItem curateOutcome) {
-        ApplicationModel model = curateOutcome.getApplicationModel();
-        ArtifactKey quarkusAwt = ArtifactKey.ga(QUARKUS_AWT_GROUP_ID, QUARKUS_AWT_ARTIFACT_ID);
-        Optional<ResolvedDependency> dependency = model.getRuntimeDependencies().stream()
-                .filter(d -> QUARKUS_AWT_GROUP_ID.equals(d.getGroupId()) && QUARKUS_AWT_ARTIFACT_ID.equals(d.getArtifactId()))
-                .findFirst();
-        if (dependency.isPresent()) {
-            quarkusAwt = dependency.get().getKey();
-            // The substitutions are private classes of quarkus-awt : one renamed or added would break GUI applications
-            List<String> unknown = unknownWindowsSubstitutions(dependency.get());
-            if (!unknown.isEmpty()) {
-                LOGGER.warnf("%s %s has Windows substitutions that Quarkus Desktop AWT does not know : %s. They may break"
-                        + " AWT GUI applications in native executables built on Windows (for instance make AWT windows"
-                        + " crash) : please report it to the Quarkus Desktop project.",
-                        quarkusAwt.toGacString(), dependency.get().getVersion(), unknown);
-            }
-        }
-        return new RemovedResourceBuildItem(quarkusAwt, Set.copyOf(QUARKUS_AWT_GUI_BLOCKERS));
+        Optional<ResolvedDependency> quarkusAwt = quarkusAwt(curateOutcome);
+        // The substitutions are private classes of quarkus-awt : one renamed or added would break GUI applications
+        quarkusAwt.ifPresent(DesktopAwtProcessor::checkQuarkusAwtContent);
+        Set<String> removed = new HashSet<>(QUARKUS_AWT_WINDOWS_GUI_BLOCKERS);
+        // A name absent from the jar removes nothing (quarkus-awt versions without macOS support)
+        removed.addAll(QUARKUS_AWT_MAC_GUI_BLOCKERS);
+        return new RemovedResourceBuildItem(quarkusAwt.map(ResolvedDependency::getKey)
+                .orElse(ArtifactKey.ga(QUARKUS_AWT_GROUP_ID, QUARKUS_AWT_ARTIFACT_ID)), removed);
     }
 
     /**
-     * The substitutions of JDK Windows classes ({@code sun.awt.windows}, {@code sun.java2d.windows}) of quarkus-awt that
-     * are not removed.
+     * Fails native builds for macOS with a quarkus-awt version that does not support macOS native executables, saying
+     * which Quarkus version is needed (quarkus-awt fails them too, without saying it).
      */
-    static List<String> unknownWindowsSubstitutions(ResolvedDependency dependency) {
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void macSupportCheck(DesktopTargetPlatformBuildItem platform, CurateOutcomeBuildItem curateOutcome,
+            BuildProducer<UnsupportedOSBuildItem> unsupported) {
+        if (platform.isMac()) {
+            quarkusAwt(curateOutcome).flatMap(DesktopAwtProcessor::macUnsupportedMessage)
+                    .ifPresent(message -> unsupported.produce(new UnsupportedOSBuildItem(OS.MAC, message)));
+        }
+    }
+
+    /**
+     * The error message of a macOS native build with the given quarkus-awt, empty when it supports macOS native
+     * executables.
+     */
+    static Optional<String> macUnsupportedMessage(ResolvedDependency quarkusAwt) {
+        return contains(quarkusAwt, QUARKUS_AWT_MAC_SENTINEL) ? Optional.empty()
+                : Optional.of(String.format(MAC_QUARKUS_TOO_OLD, quarkusAwt.getVersion()));
+    }
+
+    /**
+     * Warns about the substitutions of quarkus-awt that the extension expects to remove but does not find, and about the
+     * substitutions it does not know.
+     */
+    static void checkQuarkusAwtContent(ResolvedDependency quarkusAwt) {
+        List<String> missing = missingGuiBlockers(quarkusAwt);
+        if (!missing.isEmpty()) {
+            LOGGER.warnf("%s %s does not contain %s : Quarkus Desktop AWT cannot remove these substitutions, which break"
+                    + " AWT GUI applications in native executables. If they were renamed, please report it to the Quarkus"
+                    + " Desktop project.", quarkusAwt.getKey().toGacString(), quarkusAwt.getVersion(), missing);
+        }
+        List<String> unknown = unknownSubstitutions(quarkusAwt);
+        if (!unknown.isEmpty()) {
+            LOGGER.warnf("%s %s has substitutions that Quarkus Desktop AWT does not know : %s. If one forces headless AWT,"
+                    + " AWT GUI applications break in native executables (for instance AWT windows crash or never show) :"
+                    + " please report it to the Quarkus Desktop project.", quarkusAwt.getKey().toGacString(),
+                    quarkusAwt.getVersion(), unknown);
+        }
+    }
+
+    /**
+     * The substitutions that the extension removes : the Windows ones, and the macOS ones when this quarkus-awt version
+     * supports macOS.
+     */
+    static List<String> expectedGuiBlockers(ResolvedDependency quarkusAwt) {
+        List<String> expected = new ArrayList<>(QUARKUS_AWT_WINDOWS_GUI_BLOCKERS);
+        if (contains(quarkusAwt, QUARKUS_AWT_MAC_SENTINEL)) {
+            expected.addAll(QUARKUS_AWT_MAC_GUI_BLOCKERS);
+        }
+        return expected;
+    }
+
+    /**
+     * The expected substitutions ({@link #expectedGuiBlockers}) absent from quarkus-awt.
+     */
+    static List<String> missingGuiBlockers(ResolvedDependency quarkusAwt) {
+        return expectedGuiBlockers(quarkusAwt).stream().filter(entry -> !contains(quarkusAwt, entry)).toList();
+    }
+
+    /**
+     * The substitutions of quarkus-awt ({@code io/quarkus/awt/runtime/Target_*}) that are neither removed nor known to be
+     * harmless.
+     */
+    static List<String> unknownSubstitutions(ResolvedDependency quarkusAwt) {
+        List<String> expected = expectedGuiBlockers(quarkusAwt);
         List<String> unknown = new ArrayList<>();
         try {
-            dependency.getContentTree().walk(visit -> {
+            quarkusAwt.getContentTree().walk(visit -> {
                 String name = visit.getRelativePath("/");
-                if (name.startsWith("io/quarkus/awt/runtime/Target_") && name.contains("_windows_")
-                        && name.endsWith(".class") && !QUARKUS_AWT_GUI_BLOCKERS.contains(name)) {
+                if (name.startsWith("io/quarkus/awt/runtime/Target_") && name.endsWith(".class")
+                        && !expected.contains(name) && !QUARKUS_AWT_KNOWN_KEPT.contains(name)) {
                     unknown.add(name);
                 }
             });
         } catch (RuntimeException e) {
-            LOGGER.debugf(e, "Unable to read %s", dependency);
+            LOGGER.debugf(e, "Unable to read %s", quarkusAwt);
         }
+        unknown.sort(null);
         return unknown;
+    }
+
+    private static Optional<ResolvedDependency> quarkusAwt(CurateOutcomeBuildItem curateOutcome) {
+        return curateOutcome.getApplicationModel().getRuntimeDependencies().stream()
+                .filter(d -> QUARKUS_AWT_GROUP_ID.equals(d.getGroupId()) && QUARKUS_AWT_ARTIFACT_ID.equals(d.getArtifactId()))
+                .findFirst();
+    }
+
+    private static boolean contains(ResolvedDependency dependency, String entry) {
+        try {
+            return dependency.getContentTree().contains(entry);
+        } catch (RuntimeException e) {
+            LOGGER.debugf(e, "Unable to read %s", dependency);
+            return false;
+        }
     }
 
     // ------------------------------------------------------------------------------------------------ target platform
 
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     DesktopTargetPlatformBuildItem targetPlatform(NativeImageRunnerBuildItem nativeImageRunner) {
-        // The quarkus-awt rule : a container build produces a Linux executable
-        return new DesktopTargetPlatformBuildItem(OS.WINDOWS.isCurrent() && !nativeImageRunner.isContainerBuild()
-                ? Platform.WINDOWS
-                : Platform.LINUX);
+        return new DesktopTargetPlatformBuildItem(targetPlatform(OS.current(), nativeImageRunner.isContainerBuild()));
+    }
+
+    /**
+     * The quarkus-awt rule : no cross compilation, and a container build produces a Linux executable.
+     */
+    static Platform targetPlatform(OS host, boolean containerBuild) {
+        if (containerBuild) {
+            return Platform.LINUX;
+        }
+        return switch (host) {
+            case WINDOWS -> Platform.WINDOWS;
+            case MAC -> Platform.MAC;
+            default -> Platform.LINUX;
+        };
     }
 
     // ------------------------------------------------------------------------------------------ run time initialization
@@ -161,12 +298,14 @@ class DesktopAwtProcessor {
             BuildProducer<RuntimeInitializedClassBuildItem> classes) {
         for (String packageName : platform.withPlatform(AwtClassesAndResources.RUNTIME_INITIALIZED_PACKAGES,
                 AwtClassesAndResources.WINDOWS_RUNTIME_INITIALIZED_PACKAGES,
-                AwtClassesAndResources.LINUX_RUNTIME_INITIALIZED_PACKAGES)) {
+                AwtClassesAndResources.LINUX_RUNTIME_INITIALIZED_PACKAGES,
+                AwtClassesAndResources.MAC_RUNTIME_INITIALIZED_PACKAGES)) {
             packages.produce(new RuntimeInitializedPackageBuildItem(packageName));
         }
         for (String className : platform.withPlatform(AwtClassesAndResources.RUNTIME_INITIALIZED_CLASSES,
                 AwtClassesAndResources.WINDOWS_RUNTIME_INITIALIZED_CLASSES,
-                AwtClassesAndResources.LINUX_RUNTIME_INITIALIZED_CLASSES)) {
+                AwtClassesAndResources.LINUX_RUNTIME_INITIALIZED_CLASSES,
+                AwtClassesAndResources.MAC_RUNTIME_INITIALIZED_CLASSES)) {
             classes.produce(new RuntimeInitializedClassBuildItem(className));
         }
     }
@@ -186,23 +325,34 @@ class DesktopAwtProcessor {
 
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void reflection(DesktopTargetPlatformBuildItem platform, BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
+            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
+            BuildProducer<ReflectiveFieldBuildItem> reflectiveFields) {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(platform.withPlatform(
                 AwtClassesAndResources.REFLECTIVE_CLASSES,
                 AwtClassesAndResources.WINDOWS_REFLECTIVE_CLASSES,
-                AwtClassesAndResources.LINUX_REFLECTIVE_CLASSES)).methods().fields().reason(REASON).build());
+                AwtClassesAndResources.LINUX_REFLECTIVE_CLASSES,
+                AwtClassesAndResources.MAC_REFLECTIVE_CLASSES)).methods().fields().reason(REASON).build());
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(platform.withPlatform(
                 AwtClassesAndResources.REFLECTIVE_CONSTRUCTORS,
                 AwtClassesAndResources.WINDOWS_REFLECTIVE_CONSTRUCTORS,
-                AwtClassesAndResources.LINUX_REFLECTIVE_CONSTRUCTORS)).reason(REASON).build());
+                AwtClassesAndResources.LINUX_REFLECTIVE_CONSTRUCTORS,
+                AwtClassesAndResources.MAC_REFLECTIVE_CONSTRUCTORS)).reason(REASON).build());
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(AwtClassesAndResources.TRANSFERRED_SERIALIZABLE_CLASS)
                 .serialization().reason(REASON).build());
         for (String method : platform.withPlatform(AwtClassesAndResources.REFLECTIVE_METHODS,
                 AwtClassesAndResources.WINDOWS_REFLECTIVE_METHODS,
-                AwtClassesAndResources.LINUX_REFLECTIVE_METHODS)) {
+                AwtClassesAndResources.LINUX_REFLECTIVE_METHODS,
+                AwtClassesAndResources.MAC_REFLECTIVE_METHODS)) {
             MemberEntry entry = MemberEntry.method(method);
             reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, false, entry.className(), entry.name(),
                     entry.parameterTypes()));
+        }
+        for (String field : platform.withPlatform(AwtClassesAndResources.REFLECTIVE_FIELDS,
+                AwtClassesAndResources.WINDOWS_REFLECTIVE_FIELDS,
+                AwtClassesAndResources.LINUX_REFLECTIVE_FIELDS,
+                AwtClassesAndResources.MAC_REFLECTIVE_FIELDS)) {
+            MemberEntry entry = MemberEntry.field(field);
+            reflectiveFields.produce(new ReflectiveFieldBuildItem(REASON, entry.className(), entry.name()));
         }
     }
 
@@ -212,7 +362,8 @@ class DesktopAwtProcessor {
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(platform.withPlatform(
                 AwtClassesAndResources.SERVICE_PROVIDERS,
                 AwtClassesAndResources.WINDOWS_SERVICE_PROVIDERS,
-                AwtClassesAndResources.LINUX_SERVICE_PROVIDERS)).methods().reason(REASON).build());
+                AwtClassesAndResources.LINUX_SERVICE_PROVIDERS,
+                AwtClassesAndResources.MAC_SERVICE_PROVIDERS)).methods().reason(REASON).build());
     }
 
     /**
@@ -241,16 +392,19 @@ class DesktopAwtProcessor {
         jniClasses.produce(new JniRuntimeAccessBuildItem(true, true, true, platform.withPlatform(
                 AwtClassesAndResources.JNI_RUNTIME_ACCESS_CLASSES,
                 AwtClassesAndResources.WINDOWS_JNI_RUNTIME_ACCESS_CLASSES,
-                AwtClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_CLASSES)));
+                AwtClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_CLASSES,
+                AwtClassesAndResources.MAC_JNI_RUNTIME_ACCESS_CLASSES)));
         for (String method : platform.withPlatform(AwtClassesAndResources.JNI_RUNTIME_ACCESS_METHODS,
                 AwtClassesAndResources.WINDOWS_JNI_RUNTIME_ACCESS_METHODS,
-                AwtClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_METHODS)) {
+                AwtClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_METHODS,
+                AwtClassesAndResources.MAC_JNI_RUNTIME_ACCESS_METHODS)) {
             MemberEntry entry = MemberEntry.method(method);
             jniMethods.produce(new JniRuntimeAccessMethodBuildItem(entry.className(), entry.name(), entry.parameterTypes()));
         }
         for (String field : platform.withPlatform(AwtClassesAndResources.JNI_RUNTIME_ACCESS_FIELDS,
                 AwtClassesAndResources.WINDOWS_JNI_RUNTIME_ACCESS_FIELDS,
-                AwtClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_FIELDS)) {
+                AwtClassesAndResources.LINUX_JNI_RUNTIME_ACCESS_FIELDS,
+                AwtClassesAndResources.MAC_JNI_RUNTIME_ACCESS_FIELDS)) {
             MemberEntry entry = MemberEntry.field(field);
             jniFields.produce(new JniRuntimeAccessFieldBuildItem(entry.className(), entry.name()));
         }
@@ -263,7 +417,8 @@ class DesktopAwtProcessor {
             BuildProducer<NativeImageResourcePatternsBuildItem> resources) {
         for (String bundle : platform.withPlatform(AwtClassesAndResources.RESOURCE_BUNDLES,
                 AwtClassesAndResources.WINDOWS_RESOURCE_BUNDLES,
-                AwtClassesAndResources.LINUX_RESOURCE_BUNDLES)) {
+                AwtClassesAndResources.LINUX_RESOURCE_BUNDLES,
+                AwtClassesAndResources.MAC_RESOURCE_BUNDLES)) {
             // Without module name : native-image finds the module of a JDK bundle from its package, and GraalVM 25.3+
             // checks the module lookups of bundles (UIDefaults) against the bundle name only
             bundles.produce(new NativeImageResourceBundleBuildItem(bundle));
@@ -271,7 +426,8 @@ class DesktopAwtProcessor {
         resources.produce(NativeImageResourcePatternsBuildItem.builder()
                 .includeGlobs(platform.withPlatform(AwtClassesAndResources.RESOURCE_GLOBS,
                         AwtClassesAndResources.WINDOWS_RESOURCE_GLOBS,
-                        AwtClassesAndResources.LINUX_RESOURCE_GLOBS))
+                        AwtClassesAndResources.LINUX_RESOURCE_GLOBS,
+                        AwtClassesAndResources.MAC_RESOURCE_GLOBS))
                 .build());
     }
 
@@ -279,11 +435,16 @@ class DesktopAwtProcessor {
 
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void runTimeDefaults(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config,
+            ApplicationInfoBuildItem applicationInfo,
             BuildProducer<NativeImageFeatureBuildItem> features,
             BuildProducer<NativeImageSystemPropertyBuildItem> builderProperties) {
         features.produce(new NativeImageFeatureBuildItem(DesktopAwtFeature.class));
         if (platform.isWindows() && config.windows().dpiAware()) {
             builderProperties.produce(new NativeImageSystemPropertyBuildItem(DesktopAwtFeature.DPI_AWARE, "true"));
+        }
+        if (platform.isMac()) {
+            builderProperties.produce(new NativeImageSystemPropertyBuildItem(DesktopAwtFeature.MAC_APPLICATION_NAME,
+                    config.macos().applicationName().orElse(applicationInfo.getName())));
         }
     }
 
@@ -417,6 +578,98 @@ class DesktopAwtProcessor {
             NativeImageBuildItem nativeImage, BuildProducer<ArtifactResultBuildItem> artifactResults) {
         if (platform.isWindows() && config.windows().copyVcRuntime()) {
             WindowsExecutable.copyVcRuntime(builderJdkHome(nativeConfig), nativeImage.getPath());
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------------ macOS executable
+
+    /**
+     * Keeps the first thread of macOS native executables in the Cocoa event loop (see
+     * {@code io.quarkiverse.desktop.awt.runtime.macos.MacMainThread}).
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void macosMainThread(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config, NativeConfig nativeConfig,
+            Optional<QuarkusApplicationClassBuildItem> quarkusApplication,
+            BuildProducer<NativeImageSystemPropertyBuildItem> builderProperties) {
+        if (!platform.isMac()) {
+            return;
+        }
+        DesktopAwtConfig.Macos macos = config.macos();
+        builderProperties.produce(new NativeImageSystemPropertyBuildItem(ParkMainThreadEnabled.PROPERTY,
+                String.valueOf(macos.parkMainThread())));
+        builderProperties.produce(new NativeImageSystemPropertyBuildItem(MacMainThread.STACK_SIZE_PROPERTY,
+                String.valueOf(macos.mainThreadStackSize().asLongValue())));
+        builderProperties.produce(new NativeImageSystemPropertyBuildItem(MacMainThread.EXIT_HALT_TIMEOUT_PROPERTY,
+                String.valueOf(macos.exitHaltTimeout().toMillis())));
+        boolean fxLauncher = quarkusApplication.map(item -> QUARKUS_FX_APPLICATION.equals(item.getClassName()))
+                .orElse(false);
+        if (!macos.parkMainThread() && !fxLauncher) {
+            LOGGER.warn("quarkus.desktop.awt.macos.park-main-thread=false : no thread runs the Cocoa event loop, an AWT or"
+                    + " Swing user interface hangs at its first window");
+        }
+        if (Stream.concat(nativeConfig.additionalBuildArgs().orElse(List.of()).stream(),
+                nativeConfig.additionalBuildArgsAppend().orElse(List.of()).stream())
+                .anyMatch(arg -> arg.contains("RunMainInNewThread"))) {
+            LOGGER.warn("-H:+RunMainInNewThread moves main off the first thread of the process : an AWT or Swing user"
+                    + " interface hangs on macOS");
+        }
+        if (macos.parkMainThread()) {
+            checkQuarkusRun(Thread.currentThread().getContextClassLoader());
+        }
+    }
+
+    /**
+     * Warns when {@code Quarkus.run}, which the extension replaces on macOS, changed.
+     */
+    static void checkQuarkusRun(ClassLoader classLoader) {
+        try {
+            List<String> missing = QuarkusRunCheck.missingSteps(classLoader);
+            if (!missing.isEmpty()) {
+                LOGGER.warnf("Quarkus.run(Class, BiConsumer, String...) of this Quarkus version does not do %s any more :"
+                        + " Quarkus Desktop AWT replaces it on macOS and may not start the application as Quarkus does."
+                        + " Please report it to the Quarkus Desktop project.", missing);
+            }
+        } catch (IOException | RuntimeException e) {
+            LOGGER.debugf(e, "Unable to check Quarkus.run");
+        }
+    }
+
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void macExecutable(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config,
+            ApplicationInfoBuildItem applicationInfo, OutputTargetBuildItem outputTarget,
+            BuildProducer<GeneratedResourceBuildItem> generatedResources) throws IOException {
+        if (!platform.isMac() || !config.macos().infoPlist()) {
+            return;
+        }
+        String name = config.macos().applicationName().orElse(applicationInfo.getName());
+        List<String> args = MacExecutable.nativeImageArgs(MacExecutable.infoPlist(name, applicationInfo.getVersion()),
+                outputTarget.getOutputDirectory());
+        if (!args.isEmpty()) {
+            LOGGER.debugf("macOS executable options : %s", args);
+            generatedResources.produce(new GeneratedResourceBuildItem(MacExecutable.NATIVE_IMAGE_PROPERTIES,
+                    WindowsExecutable.nativeImageProperties(args).getBytes(StandardCharsets.UTF_8)));
+        }
+    }
+
+    /**
+     * Checks that the libraries of the JDK that a macOS native executable loads are next to it (GraalVM 25.1 and later
+     * copies them). {@code ArtifactResultBuildItem} is never produced : it makes this step run after the native build.
+     */
+    @BuildStep(onlyIf = NativeBuild.class)
+    void checkMacLibraries(DesktopTargetPlatformBuildItem platform, NativeImageBuildItem nativeImage,
+            BuildProducer<ArtifactResultBuildItem> artifactResults) {
+        if (!platform.isMac() || nativeImage.isReused()) {
+            return;
+        }
+        List<String> missing = MacExecutable.missingLibraries(nativeImage.getPath());
+        if (missing.size() == MAC_REQUIRED_LIBRARIES.size()) {
+            LOGGER.warnf("The native executable %s has no AWT library next to it : either it does not use AWT, or this"
+                    + " GraalVM does not package the macOS AWT libraries (GraalVM 25.1 or later is needed)",
+                    nativeImage.getPath());
+        } else if (!missing.isEmpty()) {
+            throw new IllegalStateException("The native executable " + nativeImage.getPath() + " needs " + missing
+                    + " next to it : this GraalVM does not package the macOS AWT libraries (GraalVM 25.1 or later is"
+                    + " needed, see https://github.com/oracle/graal/issues/13272)");
         }
     }
 

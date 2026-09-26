@@ -21,9 +21,10 @@ public interface DesktopSwingBuildTimeConfig {
      * <p>
      * By default, native executables include all the look and feels of the JDK for their platform. They make the native
      * executable larger (about 10 MB for all of them : Nimbus and the multiplexing look and feel about 3 MB each), so an
-     * application can list only those it uses. Metal, the default look and feel, is always included; Nimbus and GTK
-     * include the Synth look and feel they extend, but not the loading of Synth XML files ({@code synth}). Setting a look
-     * and feel that is not included fails with a {@code ClassNotFoundException}.
+     * application can list only those it uses. Metal, the default look and feel, is always included (and Aqua on macOS,
+     * which draws the AWT components there); Nimbus and GTK include the Synth look and feel they extend, but not the
+     * loading of Synth XML files ({@code synth}). Setting a look and feel that is not included fails with a
+     * {@code ClassNotFoundException}.
      * <p>
      * This property has no effect in JVM mode.
      */
