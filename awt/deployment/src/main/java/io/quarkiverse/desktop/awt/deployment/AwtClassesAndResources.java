@@ -14,9 +14,9 @@ package io.quarkiverse.desktop.awt.deployment;
  * (for instance the showcase metadata diff) read these fields reflectively. Any other constant of this class is a
  * {@code static final String} (or not a {@code String[]}), which these tools ignore.
  * <p>
- * <b>Target platform.</b> Windows when the build host is Windows and the build is not a container build (the rule of
- * {@code io.quarkus:quarkus-awt}), Linux otherwise. There is no macOS target : {@code io.quarkus:quarkus-awt} fails
- * native builds on macOS, so the {@code MAC_} lists are not declared.
+ * <b>Target platform.</b> The rule of {@code io.quarkus:quarkus-awt} : Windows or macOS when the build host is Windows
+ * or macOS and the build is not a container build, Linux otherwise. The {@code MAC_} lists are grouped in a section of
+ * their own, at the end of the class.
  * <p>
  * <b>Kinds and entry formats.</b> Class names are binary names ({@code java.awt.Component$FlipBufferStrategy}).
  * Parameter types are binary names, primitive type names, or either followed by {@code []} for arrays; {@code ()}
@@ -30,6 +30,7 @@ package io.quarkiverse.desktop.awt.deployment;
  * <li>{@code REFLECTIVE_CONSTRUCTORS} : classes registered for reflection with their constructors (also used for
  * classes that are only looked up by name; array classes are allowed).</li>
  * <li>{@code REFLECTIVE_METHODS} : single methods registered for reflection, {@code "fqcn#name(paramType,...)"}.</li>
+ * <li>{@code REFLECTIVE_FIELDS} : single fields registered for reflection, {@code "fqcn#field"}.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_CLASSES} : classes reached from native code, with all their constructors, methods and
  * fields.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_METHODS} : single methods or constructors reached from native code,
@@ -44,7 +45,9 @@ package io.quarkiverse.desktop.awt.deployment;
  * </ul>
  * <b>Sources.</b> The native methods of the JDK 25 desktop modules (the classes declaring native methods are
  * registered for JNI with all their members, since their native code calls back into them), the class names in the
- * JDK 25 native sources, and the tracing agent run on Windows and Linux (Xvfb) with an AWT application exercising
+ * JDK 25 native sources (for macOS, the lookups of {@code src/java.desktop/macosx/native}, and the reflection of the
+ * {@code sun.lwawt} and {@code com.apple} classes, checked against the class files of a macOS JDK 25), and the tracing
+ * agent run on Windows and Linux (Xvfb) with an AWT application exercising
  * windows, peers, menus, dialogs, file dialogs, Java2D (buffered images, volatile images, buffer strategies, XOR mode),
  * fonts, images, cursors, Robot, clipboard, printing to a PostScript stream, Desktop, Taskbar, SystemTray and sound.
  */
@@ -383,6 +386,15 @@ public final class AwtClassesAndResources {
             "com.sun.java.swing.plaf.motif.MotifTextPaneUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifToggleButtonUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifTreeUI#createUI(javax.swing.JComponent)",
+    };
+
+    static String[] REFLECTIVE_FIELDS = {
+    };
+
+    static String[] WINDOWS_REFLECTIVE_FIELDS = {
+    };
+
+    static String[] LINUX_REFLECTIVE_FIELDS = {
     };
 
     // ------------------------------------------------------------------------------------------------------------- JNI
@@ -828,5 +840,494 @@ public final class AwtClassesAndResources {
     static String[] LINUX_RESOURCE_GLOBS = {
             // the Motif look and feel of the text component peers
             "com/sun/java/swing/plaf/motif/icons/*",
+    };
+
+    // ----------------------------------------------------------------------------------------------------------- macOS
+    // On macOS every AWT component is drawn by a Swing delegate of its sun.lwawt peer (LWButtonPeer creates a JButton...)
+    // with the current look and feel, Aqua by default (UIManager.getSystemLookAndFeelClassName with LWCToolkit) : the Aqua
+    // look and feel is therefore part of quarkus-desktop-awt on macOS, as Basic and Metal are on every platform.
+
+    static String[] MAC_RUNTIME_INITIALIZED_PACKAGES = {
+            // Aqua look and feel : AquaNativeResources, AquaFileView, AquaMenuBarUI, ScreenMenu... load libosxui in their
+            // static initializers ; JRSUI native control state in direct buffers
+            "apple.laf",
+            "com.apple.laf",
+
+            // application events, dock, full screen and gestures (loaded with the toolkit)
+            "com.apple.eawt",
+
+            // com.apple.eio.FileManager loads libosx in its static initializer
+            "com.apple.eio",
+
+            // the macOS toolkit (also run time initialized by quarkus-awt's DarwinAwtFeature ; repeated here so that the
+            // desktop extension does not depend on that internal feature)
+            "sun.lwawt",
+    };
+
+    static String[] MAC_RUNTIME_INITIALIZED_CLASSES = {
+    };
+
+    static String[] MAC_REFLECTIVE_CLASSES = {
+    };
+
+    static String[] MAC_REFLECTIVE_CONSTRUCTORS = {
+            // Aqua look and feel : the default look and feel on macOS, created by name (UIManager)
+            "com.apple.laf.AquaLookAndFeel",
+
+            // Aqua look and feel : AquaUtils.RecyclableSingletonFromDefaultConstructor creates these singletons with
+            // Class.newInstance (null, and a NullPointerException later, without the constructor)
+            "com.apple.laf.AquaButtonBorder$Dynamic",
+            "com.apple.laf.AquaButtonBorder$Toggle",
+            "com.apple.laf.AquaButtonBorder$Toolbar",
+            "com.apple.laf.AquaButtonCheckBoxUI",
+            "com.apple.laf.AquaButtonRadioUI",
+            "com.apple.laf.AquaButtonToggleUI",
+            "com.apple.laf.AquaButtonUI",
+            "com.apple.laf.AquaButtonUI$AquaHierarchyButtonListener",
+            "com.apple.laf.AquaGroupBorder$TabbedPane",
+            "com.apple.laf.AquaGroupBorder$Titled",
+            "com.apple.laf.AquaGroupBorder$Titleless",
+            "com.apple.laf.AquaKeyBindings",
+            "com.apple.laf.AquaLabelUI",
+            "com.apple.laf.AquaMenuPainter",
+            "com.apple.laf.AquaPanelUI",
+            "com.apple.laf.AquaPopupMenuSeparatorUI",
+            "com.apple.laf.AquaRootPaneUI",
+            "com.apple.laf.AquaScrollRegionBorder",
+            "com.apple.laf.AquaSpinnerUI$PropertyChangeHandler",
+            "com.apple.laf.AquaSplitPaneDividerUI$HorizontalSplitDividerGradientPainter",
+            "com.apple.laf.AquaTextFieldBorder",
+            "com.apple.laf.AquaTextFieldSearch$SearchFieldBorder",
+            "com.apple.laf.AquaTextPasswordFieldUI$CapsLockSymbolPainter",
+            "com.apple.laf.AquaToolBarSeparatorUI",
+            "com.apple.laf.AquaToolBarUI$ToolBarBorder",
+            "com.apple.laf.AquaToolTipUI",
+            "com.apple.laf.AquaUtilControlSize$PropertySizeListener",
+
+            // Aqua look and feel : AquaBorder.deriveBorderForSize copies a border with its public copy constructor
+            // (getConstructor(getClass())) for JComponent.sizeVariant ; no border without it (the Dynamic, Toggle and
+            // Toolbar button borders, AquaTextFieldBorder and SearchFieldBorder are listed above)
+            "com.apple.laf.AquaButtonBorder$Named",
+            "com.apple.laf.AquaButtonCheckBoxUI$CheckBoxButtonBorder",
+            "com.apple.laf.AquaButtonExtendedTypes$SegmentedNamedBorder",
+            "com.apple.laf.AquaButtonRadioUI$RadioButtonBorder",
+    };
+
+    static String[] MAC_REFLECTIVE_METHODS = {
+            // Aqua look and feel : UI delegates (UIDefaults creates them with reflection) ; ColorChooserUI and ViewportUI
+            // are the basic ones (common list)
+            "com.apple.laf.AquaButtonCheckBoxUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaButtonRadioUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaButtonToggleUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaButtonUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaComboBoxUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaEditorPaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaFileChooserUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaInternalFrameDockIconUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaInternalFramePaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaInternalFrameUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaLabelUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaListUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaMenuBarUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaMenuItemUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaMenuUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaOptionPaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaPanelUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaPopupMenuSeparatorUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaPopupMenuUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaProgressBarUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaRootPaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaScrollBarUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaScrollPaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaSliderUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaSpinnerUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaSplitPaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTabbedPaneContrastUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTabbedPaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTableHeaderUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTableUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTextAreaUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTextFieldFormattedUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTextFieldUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTextPaneUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTextPasswordFieldUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaToolBarSeparatorUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaToolBarUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaToolTipUI#createUI(javax.swing.JComponent)",
+            "com.apple.laf.AquaTreeUI#createUI(javax.swing.JComponent)",
+
+            // Aqua look and feel : key bindings of JTabbedPane (its own LazyActionMap loads them with reflection)
+            "com.apple.laf.AquaTabbedPaneCopyFromBasicUI#loadActionMap(com.apple.laf.AquaTabbedPaneCopyFromBasicUI$LazyActionMap)",
+
+            // desktop integration : Taskbar.getIconImage (_AppDockIconHandler looks the image creator up by reflection)
+            "sun.lwawt.macosx.CImage#getCreator()",
+    };
+
+    static String[] MAC_REFLECTIVE_FIELDS = {
+            // peers : every sun.lwawt peer reads and writes the toolkit AWT event listener with reflection while it creates
+            // its Swing delegate (LWComponentPeer.getToolkitAWTEventListener) : InternalError for every AWT component and
+            // window without it
+            "java.awt.Toolkit#eventListener",
+    };
+
+    // JNI : the lookups of the macOS native code (libawt_lwawt, libosxapp), from DECLARE_CLASS / DECLARE_METHOD /
+    // DECLARE_FIELD / GetMethodID / FindClass of src/java.desktop/macosx/native (jdk25u 49411542a96). File:line of every
+    // entry : C:\dev\qdw\macmeta\jni_awt.java. Entries also registered by quarkus-awt are kept (harmless).
+
+    static String[] MAC_JNI_RUNTIME_ACCESS_CLASSES = {
+            // toolkit, AppKit thread, system colors, system properties
+            "java.lang.String",
+
+            // views, key/mouse events, input methods (AWTView, CPlatformView, CInputMethod)
+            "sun.lwawt.LWWindowPeer",
+
+            // Java2D Quartz surfaces, images, geometry, screens
+            "java.awt.geom.Rectangle2D",
+
+            // accessibility (CAccessibility/CAccessible, NSAccessibility ; java.awt.Container and java.awt.Window are in
+            // the common list)
+            "javax.accessibility.Accessible",
+            "javax.accessibility.AccessibleRole",
+    };
+
+    static String[] MAC_JNI_RUNTIME_ACCESS_METHODS = {
+            // toolkit, AppKit thread, system colors, system properties
+            "java.awt.event.InputEvent#getButtonDownMasks()",
+            "java.lang.Runnable#run()",
+            "java.lang.System#getProperty(java.lang.String)",
+            "sun.awt.AWTAutoShutdown#notifyToolkitThreadBusy()",
+            "sun.awt.AWTAutoShutdown#notifyToolkitThreadFree()",
+            "sun.lwawt.macosx.LWCToolkit#installToolkitThreadInJava()",
+            "sun.lwawt.macosx.LWCToolkit#systemColorsChanged()",
+
+            // windows (AWTWindow, CPlatformWindow, full screen, gestures)
+            "com.apple.eawt.FullScreenHandler#handleFullScreenEventFromNative(java.awt.Window,int)",
+            "com.apple.eawt.event.GestureHandler#handleGestureFromNative(java.awt.Window,int,double,double,double,double)",
+            "sun.lwawt.macosx.CPlatformWindow#checkBlockingAndOrder()",
+            "sun.lwawt.macosx.CPlatformWindow#deliverIconify(boolean)",
+            "sun.lwawt.macosx.CPlatformWindow#deliverMoveResizeEvent(int,int,int,int,boolean)",
+            "sun.lwawt.macosx.CPlatformWindow#deliverNCMouseDown()",
+            "sun.lwawt.macosx.CPlatformWindow#deliverWindowClosingEvent()",
+            "sun.lwawt.macosx.CPlatformWindow#deliverWindowFocusEvent(boolean,sun.lwawt.macosx.CPlatformWindow)",
+            "sun.lwawt.macosx.CPlatformWindow#isBlocked()",
+            "sun.lwawt.macosx.CPlatformWindow#isSimpleWindowOwnedByEmbeddedFrame()",
+            "sun.lwawt.macosx.CPlatformWindow#isVisible()",
+            "sun.lwawt.macosx.CPlatformWindow#orderAboveSiblings()",
+            "sun.lwawt.macosx.CPlatformWindow#windowDidBecomeMain()",
+            "sun.lwawt.macosx.CPlatformWindow#windowDidEnterFullScreen()",
+            "sun.lwawt.macosx.CPlatformWindow#windowDidExitFullScreen()",
+            "sun.lwawt.macosx.CPlatformWindow#windowWillEnterFullScreen()",
+            "sun.lwawt.macosx.CPlatformWindow#windowWillExitFullScreen()",
+            "sun.lwawt.macosx.CPlatformWindow#windowWillMiniaturize()",
+
+            // views, key/mouse events, input methods (AWTView, CPlatformView, CInputMethod)
+            "java.util.ArrayList#<init>()",
+            "java.util.ArrayList#contains(java.lang.Object)",
+            "java.util.Locale#<init>(java.lang.String,java.lang.String,java.lang.String)",
+            "sun.lwawt.macosx.CAccessibility#getAWTView(javax.accessibility.Accessible)",
+            "sun.lwawt.macosx.CInputMethod#addAttribute(boolean,boolean,int,int)",
+            "sun.lwawt.macosx.CInputMethod#attributedSubstringFromRange(int,int)",
+            "sun.lwawt.macosx.CInputMethod#characterIndexForPoint(int,int)",
+            "sun.lwawt.macosx.CInputMethod#dispatchText(int,int,boolean)",
+            "sun.lwawt.macosx.CInputMethod#firstRectForCharacterRange(int)",
+            "sun.lwawt.macosx.CInputMethod#insertText(java.lang.String)",
+            "sun.lwawt.macosx.CInputMethod#markedRange()",
+            "sun.lwawt.macosx.CInputMethod#selectPreviousGlyph()",
+            "sun.lwawt.macosx.CInputMethod#selectedRange()",
+            "sun.lwawt.macosx.CInputMethod#startIMUpdate(java.lang.String)",
+            "sun.lwawt.macosx.CInputMethod#unmarkText()",
+            "sun.lwawt.macosx.CPlatformView#deliverKeyEvent(sun.lwawt.macosx.NSEvent)",
+            "sun.lwawt.macosx.CPlatformView#deliverMouseEvent(sun.lwawt.macosx.NSEvent)",
+            "sun.lwawt.macosx.CPlatformView#deliverResize(int,int,int,int)",
+            "sun.lwawt.macosx.CPlatformView#deliverWindowDidExposeEvent()",
+            "sun.lwawt.macosx.NSEvent#<init>(int,int,short,java.lang.String,java.lang.String)",
+
+            // Desktop / Taskbar / app events (com.apple.eawt handlers ; the lists of opened files are ArrayLists, whose
+            // constructor and add method are in the common list)
+            "com.apple.eawt._AppEventHandler#handleNativeNotification(int)",
+            "com.apple.eawt._AppEventHandler#handleOpenFiles(java.util.List,java.lang.String)",
+            "com.apple.eawt._AppEventHandler#handleOpenURI(java.lang.String)",
+            "com.apple.eawt._AppEventHandler#handlePrintFiles(java.util.List)",
+            "com.apple.eawt._AppMenuBarHandler#initMenuStates(boolean,boolean,boolean,boolean)",
+
+            // menus
+            "sun.lwawt.macosx.CCheckboxMenuItem#handleAction(boolean)",
+            "sun.lwawt.macosx.CMenuItem#handleAction(long,int)",
+
+            // clipboard and drag and drop
+            "java.io.IOException#<init>(java.lang.String)",
+            "sun.awt.datatransfer.DataTransferer#convertData(java.lang.Object,java.awt.datatransfer.Transferable,long,java.util.Map,boolean)",
+            "sun.awt.datatransfer.DataTransferer#getInstance()",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragDropFinished(boolean,int,int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragEnter(int,int,int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragExit(int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#dragMotion(int,int,int,int)",
+            "sun.awt.dnd.SunDragSourceContextPeer#operationChanged(int,int,int,int)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleDropMessage(java.awt.Component,int,int,int,int,long[],long)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleEnterMessage(java.awt.Component,int,int,int,int,long[],long)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleExitMessage(java.awt.Component,long)",
+            "sun.awt.dnd.SunDropTargetContextPeer#handleMotionMessage(java.awt.Component,int,int,int,int,long[],long)",
+            "sun.lwawt.macosx.CClipboard#notifyChanged()",
+            "sun.lwawt.macosx.CClipboard#notifyLostOwnership()",
+            "sun.lwawt.macosx.CDragSourceContextPeer#dragMouseMoved(int,int,int,int)",
+            "sun.lwawt.macosx.CDragSourceContextPeer#resetHovering()",
+            "sun.lwawt.macosx.CDropTargetContextPeer#getDropTargetContextPeer()",
+            "sun.lwawt.macosx.CDropTargetContextPeer#newData(long,byte[])",
+            "sun.lwawt.macosx.CDropTargetContextPeer#transferFailed(long)",
+
+            // cursors
+            "java.lang.NoSuchMethodException#<init>(java.lang.String)",
+
+            // FileDialog
+            "sun.lwawt.macosx.CFileDialog#queryFilenameFilter(java.lang.String)",
+
+            // SystemTray / TrayIcon
+            "sun.lwawt.macosx.CTrayIcon#getPopupMenuModel()",
+            "sun.lwawt.macosx.CTrayIcon#handleMouseEvent(sun.lwawt.macosx.NSEvent)",
+            "sun.lwawt.macosx.NSEvent#<init>(int,int,int,int,int,int,int,int,double,double,int)",
+
+            // Robot
+            "java.awt.AWTException#<init>(java.lang.String)",
+
+            // fonts, CoreText, text rendering
+            "java.awt.Font#getFont2D()",
+            "java.awt.geom.GeneralPath#<init>(int,byte[],int,float[],int)",
+            "java.awt.geom.Rectangle2D$Float#setRect(float,float,float,float)",
+            "sun.font.CFont#getStrike(java.awt.Font)",
+            "sun.font.CFontManager#registerFont(java.lang.String,java.lang.String)",
+            "sun.font.CStrike#getNativeStrikePtr()",
+            "sun.font.StrikeMetrics#<init>(float,float,float,float,float,float,float,float,float,float)",
+
+            // Java2D Quartz surfaces, images, geometry, screens
+            "java.awt.Dimension#<init>(int,int)",
+            "java.awt.DisplayMode#<init>(int,int,int,int)",
+            "java.awt.Insets#<init>(int,int,int,int)",
+            "java.awt.geom.Dimension2D#getHeight()",
+            "java.awt.geom.Dimension2D#getWidth()",
+            "java.awt.geom.Point2D#getX()",
+            "java.awt.geom.Point2D#getY()",
+            "java.awt.geom.Point2D$Double#<init>(double,double)",
+            "java.awt.geom.Rectangle2D$Double#<init>(double,double,double,double)",
+            "java.awt.geom.RectangularShape#getHeight()",
+            "java.awt.geom.RectangularShape#getWidth()",
+            "java.awt.geom.RectangularShape#getX()",
+            "java.awt.geom.RectangularShape#getY()",
+            "java.lang.IllegalArgumentException#<init>(java.lang.String)",
+            "java.lang.InternalError#<init>(java.lang.String)",
+            "java.lang.RuntimeException#<init>(java.lang.String)",
+            "sun.awt.CGraphicsEnvironment#_displayReconfiguration(int,boolean)",
+            "sun.java2d.OSXOffScreenSurfaceData#syncFromCustom()",
+            "sun.java2d.OSXOffScreenSurfaceData#syncToCustom()",
+
+            // Java2D Metal pipeline
+            "java.lang.NullPointerException#<init>(java.lang.String)",
+            "sun.java2d.metal.MTLLayer#drawInMTLContext()",
+            "sun.java2d.metal.MTLSurfaceData#dispose(long,sun.java2d.metal.MTLGraphicsConfig)",
+
+            // Java2D OpenGL/CGL pipeline
+            "sun.java2d.opengl.CGLLayer#drawInCGLContext()",
+            "sun.java2d.opengl.OGLSurfaceData#dispose(long,sun.java2d.opengl.OGLGraphicsConfig)",
+
+            // printing
+            "java.awt.print.PageFormat#getOrientation()",
+            "java.awt.print.PageFormat#getPaper()",
+            "java.awt.print.PageFormat#setOrientation(int)",
+            "java.awt.print.PageFormat#setPaper(java.awt.print.Paper)",
+            "java.awt.print.Pageable#getNumberOfPages()",
+            "java.awt.print.Paper#<init>()",
+            "java.awt.print.Paper#getHeight()",
+            "java.awt.print.Paper#getImageableHeight()",
+            "java.awt.print.Paper#getImageableWidth()",
+            "java.awt.print.Paper#getImageableX()",
+            "java.awt.print.Paper#getImageableY()",
+            "java.awt.print.Paper#getWidth()",
+            "java.awt.print.Paper#setImageableArea(double,double,double,double)",
+            "java.awt.print.Paper#setSize(double,double)",
+            "java.awt.print.PrinterAbortException#<init>(java.lang.String)",
+            "java.lang.Integer#<init>(int)",
+            "java.lang.OutOfMemoryError#<init>(java.lang.String)",
+            "sun.lwawt.macosx.CPrinterJob#cancelCheck()",
+            "sun.lwawt.macosx.CPrinterJob#completePrintLoop(java.lang.Throwable)",
+            "sun.lwawt.macosx.CPrinterJob#detachPrintLoop(long,long)",
+            "sun.lwawt.macosx.CPrinterJob#getDestinationFile()",
+            "sun.lwawt.macosx.CPrinterJob#getNSPrintInfo()",
+            "sun.lwawt.macosx.CPrinterJob#getOutputBin()",
+            "sun.lwawt.macosx.CPrinterJob#getPageFormat(int)",
+            "sun.lwawt.macosx.CPrinterJob#getPageFormatArea(java.awt.print.PageFormat)",
+            "sun.lwawt.macosx.CPrinterJob#getPageformatPrintablePeekgraphics(int)",
+            "sun.lwawt.macosx.CPrinterJob#getPrinterName()",
+            "sun.lwawt.macosx.CPrinterJob#getPrinterTray()",
+            "sun.lwawt.macosx.CPrinterJob#getSides()",
+            "sun.lwawt.macosx.CPrinterJob#printAndGetPageFormatArea(java.awt.print.Printable,java.awt.Graphics,java.awt.print.PageFormat,int)",
+            "sun.lwawt.macosx.CPrinterJob#printToPathGraphics(sun.print.PeekGraphics,java.awt.print.PrinterJob,java.awt.print.Printable,java.awt.print.PageFormat,int,long)",
+            "sun.lwawt.macosx.CPrinterJob#setCopiesAttribute(int)",
+            "sun.lwawt.macosx.CPrinterJob#setDestinationFile(java.lang.String)",
+            "sun.lwawt.macosx.CPrinterJob#setOutputBin(java.lang.String)",
+            "sun.lwawt.macosx.CPrinterJob#setPageRangeAttribute(int,int,boolean)",
+            "sun.lwawt.macosx.CPrinterJob#setPrintToFile(boolean)",
+            "sun.lwawt.macosx.CPrinterJob#setPrinterServiceFromNative(java.lang.String)",
+            "sun.lwawt.macosx.CPrinterJob#setSides(int)",
+            "sun.print.RasterPrinterJob#getCopiesInt()",
+            "sun.print.RasterPrinterJob#getFromPageAttrib()",
+            "sun.print.RasterPrinterJob#getJobName()",
+            "sun.print.RasterPrinterJob#getMaxPageAttrib()",
+            "sun.print.RasterPrinterJob#getMinPageAttrib()",
+            "sun.print.RasterPrinterJob#getPageFormatFromAttributes()",
+            "sun.print.RasterPrinterJob#getPageable()",
+            "sun.print.RasterPrinterJob#getSelectAttrib()",
+            "sun.print.RasterPrinterJob#getToPageAttrib()",
+            "sun.print.RasterPrinterJob#isCollated()",
+            "sun.print.RasterPrinterJob#setCollated(boolean)",
+
+            // accessibility (CAccessibility/CAccessible, NSAccessibility : VoiceOver and any app using the AX API)
+            "java.lang.Number#doubleValue()",
+            "java.lang.Number#intValue()",
+            "java.lang.Object#equals(java.lang.Object)",
+            "javax.accessibility.AccessibleSelection#isAccessibleChildSelected(int)",
+            "sun.lwawt.macosx.CAccessibility#accessibilityHitTest(java.awt.Container,float,float)",
+            "sun.lwawt.macosx.CAccessibility#addAccessibleSelection(javax.accessibility.AccessibleContext,int,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#ax_getAccessibleSelection(javax.accessibility.AccessibleContext,int,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#contains(javax.accessibility.AccessibleContext,javax.accessibility.AccessibleState,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#doAccessibleAction(javax.accessibility.AccessibleAction,int,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibility(java.lang.String[])",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleAction(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleActionCount(javax.accessibility.AccessibleAction,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleActionDescription(javax.accessibility.AccessibleAction,int,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleComboboxValue(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleComponent(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleContext(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleCurrentAccessible(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleDescription(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleIndexInParent(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleName(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleParent(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleRole(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleRoleDisplayString(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleSelection(javax.accessibility.AccessibleContext,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleStateSet(javax.accessibility.AccessibleContext,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleText(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getAccessibleValue(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getCharCount(javax.accessibility.AccessibleText,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getChildrenAndRoles(javax.accessibility.Accessible,java.awt.Component,int,boolean)",
+            "sun.lwawt.macosx.CAccessibility#getChildrenAndRolesRecursive(javax.accessibility.Accessible,java.awt.Component,int,boolean,int)",
+            "sun.lwawt.macosx.CAccessibility#getCurrentAccessiblePopupMenu(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getCurrentAccessibleValue(javax.accessibility.AccessibleValue,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getFocusOwner(java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getInitialAttributeStates(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getLocationOnScreen(javax.accessibility.AccessibleComponent,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getMaximumAccessibleValue(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getMinimumAccessibleValue(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getSize(javax.accessibility.AccessibleComponent,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#getTableInfo(javax.accessibility.Accessible,java.awt.Component,int)",
+            "sun.lwawt.macosx.CAccessibility#getTableRowChildrenAndRoles(javax.accessibility.Accessible,java.awt.Component,int,boolean,int)",
+            "sun.lwawt.macosx.CAccessibility#getTableSelectedInfo(javax.accessibility.Accessible,java.awt.Component,int)",
+            "sun.lwawt.macosx.CAccessibility#isAccessibleChildSelected(javax.accessibility.Accessible,int,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#isEnabled(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#isFocusTraversable(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#isTreeRootVisible(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#requestFocus(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibility#requestSelection(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessible#getCAccessible(javax.accessibility.Accessible)",
+            "sun.lwawt.macosx.CAccessible#getSwingAccessible(javax.accessibility.Accessible)",
+            "sun.lwawt.macosx.CAccessibleText#getAccessibleEditableText(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibleText#getBoundsForRange(javax.accessibility.Accessible,java.awt.Component,int,int)",
+            "sun.lwawt.macosx.CAccessibleText#getCharacterIndexAtPosition(javax.accessibility.Accessible,java.awt.Component,int,int)",
+            "sun.lwawt.macosx.CAccessibleText#getLineNumberForIndex(javax.accessibility.Accessible,java.awt.Component,int)",
+            "sun.lwawt.macosx.CAccessibleText#getLineNumberForInsertionPoint(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibleText#getRangeForIndex(javax.accessibility.Accessible,java.awt.Component,int)",
+            "sun.lwawt.macosx.CAccessibleText#getRangeForLine(javax.accessibility.Accessible,java.awt.Component,int)",
+            "sun.lwawt.macosx.CAccessibleText#getSelectedText(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibleText#getSelectedTextRange(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibleText#getStringForRange(javax.accessibility.Accessible,java.awt.Component,int,int)",
+            "sun.lwawt.macosx.CAccessibleText#getTextRange(javax.accessibility.AccessibleEditableText,int,int,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibleText#getVisibleCharacterRange(javax.accessibility.Accessible,java.awt.Component)",
+            "sun.lwawt.macosx.CAccessibleText#setSelectedText(javax.accessibility.Accessible,java.awt.Component,java.lang.String)",
+            "sun.lwawt.macosx.CAccessibleText#setSelectedTextRange(javax.accessibility.Accessible,java.awt.Component,int,int)",
+            "sun.lwawt.macosx.LWCToolkit#doEquals(java.lang.Object,java.lang.Object,java.awt.Component)",
+
+            // JAWT / embedded frames (libjawt is not copied by GraalVM ; for applications that copy it)
+            "sun.awt.EmbeddedFrame#setBoundsPrivate(int,int,int,int)",
+            "sun.lwawt.macosx.CPlatformComponent#getPointer()",
+            "sun.lwawt.macosx.CViewEmbeddedFrame#<init>(long)",
+            "sun.lwawt.macosx.CViewEmbeddedFrame#synthesizeWindowActivation(boolean)",
+    };
+
+    static String[] MAC_JNI_RUNTIME_ACCESS_FIELDS = {
+            // windows (AWTWindow, CPlatformWindow, full screen, gestures)
+            "sun.lwawt.macosx.CPlatformWindow#target",
+
+            // views, key/mouse events, input methods (AWTView, CPlatformView, CInputMethod)
+            "sun.lwawt.LWComponentPeer#target",
+            "sun.lwawt.macosx.CInputMethod#fCurrentText",
+            "sun.lwawt.macosx.CInputMethod#fCurrentTextLength",
+            "sun.lwawt.macosx.CPlatformView#peer",
+
+            // fonts, CoreText, text rendering
+            "sun.font.StandardGlyphVector#glyphs",
+            "sun.font.StandardGlyphVector#gti",
+            "sun.font.StandardGlyphVector#positions",
+            "sun.font.StandardGlyphVector$GlyphTransformInfo#indices",
+            "sun.font.StandardGlyphVector$GlyphTransformInfo#transforms",
+
+            // Java2D Quartz surfaces, images, geometry, screens
+            "java.awt.image.ColorModel#transparency",
+            "java.awt.image.IndexColorModel#allgrayopaque",
+            "java.awt.image.IndexColorModel#map_size",
+            "java.awt.image.IndexColorModel#rgb",
+            "java.awt.image.IndexColorModel#transparent_index",
+
+            // Java2D Metal pipeline
+            "sun.java2d.metal.MTLSurfaceData#nativeHeight",
+            "sun.java2d.metal.MTLSurfaceData#nativeWidth",
+
+            // Java2D OpenGL/CGL pipeline
+            "sun.java2d.opengl.OGLSurfaceData#isBIOpShaderEnabled",
+            "sun.java2d.opengl.OGLSurfaceData#isFBObjectEnabled",
+            "sun.java2d.opengl.OGLSurfaceData#isGradShaderEnabled",
+            "sun.java2d.opengl.OGLSurfaceData#isLCDShaderEnabled",
+            "sun.java2d.opengl.OGLSurfaceData#nativeHeight",
+            "sun.java2d.opengl.OGLSurfaceData#nativeWidth",
+
+            // printing
+            "sun.lwawt.macosx.CPrinterDialog#fPrinterJob",
+            "sun.lwawt.macosx.CPrinterJobDialog#fPageable",
+            "sun.lwawt.macosx.CPrinterPageDialog#fPage",
+
+            // accessibility
+            "java.awt.Dimension#height",
+            "java.awt.Dimension#width",
+            "java.awt.Point#x",
+            "java.awt.Point#y",
+            "javax.accessibility.AccessibleBundle#key",
+            "javax.accessibility.AccessibleState#EXPANDED",
+            "javax.accessibility.AccessibleState#HORIZONTAL",
+            "javax.accessibility.AccessibleState#SELECTABLE",
+            "javax.accessibility.AccessibleState#SHOWING",
+            "javax.accessibility.AccessibleState#VERTICAL",
+            "sun.lwawt.macosx.CFRetainedResource#ptr",
+
+            // JAWT / embedded frames
+            "java.awt.Component#height",
+            "java.awt.Component#peer",
+            "java.awt.Component#width",
+            "java.awt.Component#x",
+            "java.awt.Component#y",
+            "sun.lwawt.LWComponentPeer#platformComponent",
+    };
+
+    static String[] MAC_SERVICE_PROVIDERS = {
+            // none : the CUPS print service lookup, data transfer and sound providers are the common ones
+    };
+
+    static String[] MAC_RESOURCE_BUNDLES = {
+            // toolkit (key and modifier names : the platform resources of LWCToolkit)
+            "sun.awt.resources.awtosx",
+
+            // Aqua look and feel (texts of the file chooser, option panes...)
+            "com.apple.laf.resources.aqua",
+    };
+
+    static String[] MAC_RESOURCE_GLOBS = {
+            // none : Aqua draws with JRSUI and NSImage, the default dock icon is compiled into libosxapp
     };
 }

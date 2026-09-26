@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
@@ -45,6 +47,7 @@ class AwtClassesAndResourcesTest {
             Map.entry("REFLECTIVE_CLASSES", TYPE_ENTRY),
             Map.entry("REFLECTIVE_CONSTRUCTORS", TYPE_ENTRY),
             Map.entry("REFLECTIVE_METHODS", METHOD_ENTRY),
+            Map.entry("REFLECTIVE_FIELDS", FIELD_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_CLASSES", NAME_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_METHODS", METHOD_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_FIELDS", FIELD_ENTRY),
@@ -103,6 +106,64 @@ class AwtClassesAndResourcesTest {
         assertEntriesExist("LINUX_");
     }
 
+    @Test
+    @EnabledOnOs(OS.MAC)
+    void macEntriesExist() throws IllegalAccessException {
+        assertEntriesExist("MAC_");
+    }
+
+    /**
+     * The entries of the macOS lists exist in a macOS JDK given with {@code -Dmac.java.home=<its java.home>} (for
+     * instance an extracted macOS JDK or JRE archive), on any operating system : its class files are read from its
+     * {@code lib/modules} image.
+     */
+    @Test
+    @EnabledIfSystemProperty(named = "mac.java.home", matches = ".+")
+    void macEntriesExistInMacJdk() throws Exception {
+        try (JdkClassFiles jdk = JdkClassFiles.open(Path.of(System.getProperty("mac.java.home")))) {
+            assertTrue(jdk.hasClass("sun.lwawt.macosx.LWCToolkit"), "not a macOS JDK : " + System.getProperty("mac.java.home"));
+            List<String> missing = new ArrayList<>(jdk.missingEntries(AwtClassesAndResources.class, "MAC_"));
+            if (!jdk.hasModule("jdk.unsupported.desktop")) {
+                // a JRE image without the module of the JavaFX Swing interoperability
+                missing.remove("RUNTIME_INITIALIZED_PACKAGES : jdk.swing.interop");
+            }
+            assertTrue(missing.isEmpty(), "not in the macOS JDK :\n" + String.join("\n", missing));
+        }
+    }
+
+    /**
+     * The check of the entries against the class files of a JDK, with the JDK running the tests.
+     */
+    @Test
+    void jdkClassFiles() throws Exception {
+        String platform = Platforms.current();
+        try (JdkClassFiles jdk = JdkClassFiles.open(Path.of(System.getProperty("java.home")))) {
+            assertEquals(List.of(), jdk.missingEntries(AwtClassesAndResources.class, platform));
+            assertTrue(jdk.hasMethod(MemberEntry.method("java.awt.Toolkit#getDefaultToolkit()")));
+            assertTrue(jdk.hasMethod(MemberEntry.method("java.awt.Component#<init>()")));
+            assertTrue(jdk.hasMethod(MemberEntry.method("java.awt.image.BufferedImage#getRGB(int,int,int,int,int[],int,int)")));
+            assertFalse(jdk.hasMethod(MemberEntry.method("java.awt.image.BufferedImage#getRGB(int,int,int,int,int,int,int)")));
+            assertFalse(jdk.hasMethod(MemberEntry.method("java.awt.Toolkit#getDefaultToolkit(int)")));
+            assertTrue(jdk.hasField(MemberEntry.field("java.awt.Toolkit#eventListener")));
+            assertFalse(jdk.hasField(MemberEntry.field("java.awt.Toolkit#noSuchField")));
+            assertTrue(jdk.hasPackage("java.awt.image") && !jdk.hasPackage("java.awt.nosuchpackage"));
+            assertTrue(jdk.hasBundle("sun.awt.resources.awt") && !jdk.hasBundle("sun.awt.resources.nosuchbundle"));
+            assertTrue(jdk.hasGlob("sun/awt/resources/cursors/*") && !jdk.hasGlob("sun/awt/resources/nosuch/*"));
+            assertFalse(jdk.hasClass("sun.lwawt.macosx.NoSuchClass"));
+        }
+    }
+
+    /**
+     * The list prefix of the platform running the tests.
+     */
+    static final class Platforms {
+
+        static String current() {
+            String os = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
+            return os.startsWith("windows") ? "WINDOWS_" : os.startsWith("mac") ? "MAC_" : "LINUX_";
+        }
+    }
+
     /**
      * The classes and members of the common lists and of the lists of the given platform exist in the JDK of the build
      * (the JDK of the platform).
@@ -138,12 +199,14 @@ class AwtClassesAndResourcesTest {
                 }
             }
         }
-        for (String entry : entries("JNI_RUNTIME_ACCESS_FIELDS", platform)) {
-            MemberEntry field = MemberEntry.field(entry);
-            try {
-                type(field.className()).getDeclaredField(field.name());
-            } catch (ReflectiveOperationException e) {
-                errors.add("JNI_RUNTIME_ACCESS_FIELDS : not found " + entry);
+        for (String kind : List.of("REFLECTIVE_FIELDS", "JNI_RUNTIME_ACCESS_FIELDS")) {
+            for (String entry : entries(kind, platform)) {
+                MemberEntry field = MemberEntry.field(entry);
+                try {
+                    type(field.className()).getDeclaredField(field.name());
+                } catch (ReflectiveOperationException e) {
+                    errors.add(kind + " : not found " + entry);
+                }
             }
         }
         assertTrue(errors.isEmpty(), String.join("\n", errors));

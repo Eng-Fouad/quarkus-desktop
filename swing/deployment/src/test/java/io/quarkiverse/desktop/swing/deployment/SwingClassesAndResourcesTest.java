@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
@@ -54,6 +55,7 @@ class SwingClassesAndResourcesTest {
             Map.entry("REFLECTIVE_CLASSES", TYPE_ENTRY),
             Map.entry("REFLECTIVE_CONSTRUCTORS", TYPE_ENTRY),
             Map.entry("REFLECTIVE_METHODS", METHOD_ENTRY),
+            Map.entry("REFLECTIVE_FIELDS", FIELD_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_CLASSES", NAME_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_METHODS", METHOD_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_FIELDS", FIELD_ENTRY),
@@ -113,6 +115,26 @@ class SwingClassesAndResourcesTest {
     }
 
     @Test
+    @EnabledOnOs(OS.MAC)
+    void macEntriesExist() throws IllegalAccessException {
+        assertEntriesExist("MAC_");
+    }
+
+    /**
+     * The entries of the macOS lists exist in a macOS JDK given with {@code -Dmac.java.home=<its java.home>}, on any
+     * operating system : its class files are read from its {@code lib/modules} image.
+     */
+    @Test
+    @EnabledIfSystemProperty(named = "mac.java.home", matches = ".+")
+    void macEntriesExistInMacJdk() throws Exception {
+        try (JdkClassFiles jdk = JdkClassFiles.open(Path.of(System.getProperty("mac.java.home")))) {
+            assertTrue(jdk.hasClass("com.apple.laf.ScreenMenu"), "not a macOS JDK : " + System.getProperty("mac.java.home"));
+            List<String> missing = jdk.missingEntries(SwingClassesAndResources.class, "MAC_");
+            assertTrue(missing.isEmpty(), "not in the macOS JDK :\n" + String.join("\n", missing));
+        }
+    }
+
+    @Test
     void entriesAreNotInTheAwtLists() throws IllegalAccessException {
         List<String> duplicates = new ArrayList<>();
         for (Field field : SwingClassesAndResources.class.getDeclaredFields()) {
@@ -124,7 +146,7 @@ class SwingClassesAndResourcesTest {
             Set<String> awt = new LinkedHashSet<>();
             // an AWT entry for all platforms, or for the platform of the Swing list
             for (String list : name.group(1) == null ? List.of(name.group(2), "WINDOWS_" + name.group(2),
-                    "LINUX_" + name.group(2)) : List.of(name.group(2), field.getName())) {
+                    "LINUX_" + name.group(2), "MAC_" + name.group(2)) : List.of(name.group(2), field.getName())) {
                 awt.addAll(awtList(list));
             }
             if (name.group(1) == null) {
@@ -237,12 +259,14 @@ class SwingClassesAndResourcesTest {
                 }
             }
         }
-        for (String entry : entries("JNI_RUNTIME_ACCESS_FIELDS", platform)) {
-            MemberEntry field = MemberEntry.field(entry);
-            try {
-                type(field.className()).getDeclaredField(field.name());
-            } catch (ReflectiveOperationException e) {
-                errors.add("JNI_RUNTIME_ACCESS_FIELDS : not found " + entry);
+        for (String kind : List.of("REFLECTIVE_FIELDS", "JNI_RUNTIME_ACCESS_FIELDS")) {
+            for (String entry : entries(kind, platform)) {
+                MemberEntry field = MemberEntry.field(entry);
+                try {
+                    type(field.className()).getDeclaredField(field.name());
+                } catch (ReflectiveOperationException e) {
+                    errors.add(kind + " : not found " + entry);
+                }
             }
         }
         assertTrue(errors.isEmpty(), String.join("\n", errors));

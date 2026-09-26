@@ -18,8 +18,10 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * these fields reflectively. Any other constant of this class is a {@code static final String} (or not a
  * {@code String[]}), which these tools ignore.
  * <p>
- * <b>Target platform.</b> Windows when the build host is Windows and the build is not a container build, Linux
- * otherwise. There is no macOS target, so the {@code MAC_} lists are not declared.
+ * <b>Target platform.</b> Windows or macOS when the build host is Windows or macOS and the build is not a container
+ * build, Linux otherwise. The {@code MAC_} lists are grouped in a section of their own, at the end of the class : the
+ * Aqua look and feel is registered by {@link AwtClassesAndResources} on macOS, since the AWT components are drawn by
+ * Aqua delegates there.
  * <p>
  * <b>Kinds and entry formats.</b> Class names are binary names ({@code javax.swing.JEditorPane$PlainEditorKit}).
  * Parameter types are binary names, primitive type names, or either followed by {@code []} for arrays; {@code ()} means
@@ -33,6 +35,7 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * <li>{@code REFLECTIVE_CONSTRUCTORS} : classes registered for reflection with their constructors (also used for
  * classes that are only looked up by name; array classes are allowed).</li>
  * <li>{@code REFLECTIVE_METHODS} : single methods registered for reflection, {@code "fqcn#name(paramType,...)"}.</li>
+ * <li>{@code REFLECTIVE_FIELDS} : single fields registered for reflection, {@code "fqcn#field"}.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_CLASSES} : classes reached from native code, with all their constructors, methods and
  * fields.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_METHODS} : single methods or constructors reached from native code,
@@ -500,6 +503,15 @@ public final class SwingClassesAndResources {
             "com.sun.java.swing.plaf.gtk.Metacity#getTitlePaneLayout()",
     };
 
+    static String[] REFLECTIVE_FIELDS = {
+    };
+
+    static String[] WINDOWS_REFLECTIVE_FIELDS = {
+    };
+
+    static String[] LINUX_REFLECTIVE_FIELDS = {
+    };
+
     // ------------------------------------------------------------------------------------------------------------- JNI
     // The native code of Swing (Windows themes, GTK engine, shell folders) creates the AWT and java.base objects that
     // the Desktop AWT extension registers.
@@ -585,5 +597,51 @@ public final class SwingClassesAndResources {
             // GTK look and feel : icons, and the theme of the window decorations drawn by the look and feel (Metacity)
             "com/sun/java/swing/plaf/gtk/icons/*",
             "com/sun/java/swing/plaf/gtk/resources/metacity/**",
+    };
+
+    // ----------------------------------------------------------------------------------------------------------- macOS
+    // The Aqua look and feel is registered by the Desktop AWT extension on macOS (the AWT components are drawn by Aqua
+    // delegates) : only what the Swing API alone reaches is here.
+
+    static String[] MAC_RUNTIME_INITIALIZED_PACKAGES = {
+    };
+
+    static String[] MAC_RUNTIME_INITIALIZED_CLASSES = {
+    };
+
+    static String[] MAC_REFLECTIVE_CLASSES = {
+    };
+
+    static String[] MAC_REFLECTIVE_CONSTRUCTORS = {
+    };
+
+    static String[] MAC_REFLECTIVE_METHODS = {
+    };
+
+    static String[] MAC_REFLECTIVE_FIELDS = {
+    };
+
+    static String[] MAC_JNI_RUNTIME_ACCESS_CLASSES = {
+    };
+
+    static String[] MAC_JNI_RUNTIME_ACCESS_METHODS = {
+            // screen menu bar (apple.laf.useScreenMenuBar=true : a JMenuBar shown in the macOS menu bar) : libosxui calls
+            // back into ScreenMenu when a menu opens, closes, or an item is highlighted or clicked
+            "com.apple.laf.ScreenMenu#handleItemTargeted(int,int,int,int,int)",
+            "com.apple.laf.ScreenMenu#handleMouseEvent(int,int,int,int,long)",
+            "com.apple.laf.ScreenMenu#invokeMenuClosing()",
+            "com.apple.laf.ScreenMenu#invokeOpenLater()",
+    };
+
+    static String[] MAC_JNI_RUNTIME_ACCESS_FIELDS = {
+    };
+
+    static String[] MAC_SERVICE_PROVIDERS = {
+    };
+
+    static String[] MAC_RESOURCE_BUNDLES = {
+    };
+
+    static String[] MAC_RESOURCE_GLOBS = {
     };
 }
