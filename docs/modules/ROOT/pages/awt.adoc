@@ -197,7 +197,11 @@ and report the missing registration (the native image tracing agent gives it, se
 * The application does not exit: the process is halted when `System.exit` does not complete within
 `quarkus.desktop.awt.macos.exit-halt-timeout`, with a message.
 * Robot and screen capture need the Screen Recording and Accessibility permissions (System Settings, Privacy &
-Security) of the application that starts the executable (for instance the terminal).
+Security) of the application that starts the executable (for instance the terminal). Without Accessibility, macOS drops
+the input events of Robot without an error. Robot reads the screen through the color profile of the display: a pixel
+may read one or two levels away from the color painted, compare with a tolerance. As in JVM mode, do not call
+`Robot.waitForIdle()` from two threads at the same time: the macOS toolkit waits on a lock of the application that each
+call replaces, and the process may crash.
 
 xref:macos-verification.adoc[Verifying macOS support] describes how to check the macOS support on a Mac.
 

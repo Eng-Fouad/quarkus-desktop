@@ -4,9 +4,11 @@ include::./includes/attributes.adoc[]
 :diataxis-type: howto
 :categories: miscellaneous
 
-The macOS support of the native executables is implemented and unit tested on Windows and Linux (the macOS lists of
-the extensions are checked against the class files of a macOS JDK), but it can only run on a Mac. This page is the
-check list to run on an Apple silicon Mac, and how to report the results. Each step says what to look at.
+The macOS support of the native executables was verified on an Apple silicon Mac (macOS 27, GraalVM Community
+25.4.4.1.1, Quarkus built from the pull request below): the integration tests, every step of this page, and the showcase
+(native and JVM runs identical, except the documented native image limits). This page is the check list to repeat it,
+for instance with another GraalVM, Quarkus or macOS version, and how to report the results. Each step says what to look
+at.
 
 == Setup
 
@@ -45,11 +47,14 @@ cd quarkus-desktop
 
 [source,bash]
 ----
-./mvnw -B verify -Dnative -pl awt/integration-tests,swing/integration-tests -Dquarkus.version=999-SNAPSHOT \
-    2>&1 | tee it.log
+./mvnw -B verify -Dnative -Dnative.surefire.skip -pl awt/integration-tests,swing/integration-tests \
+    -Dquarkus.version=999-SNAPSHOT 2>&1 | tee it.log
 ----
 
 Windows are shown for a few seconds. Report the test results (and the `RESULT ... FAILED` lines of `it.log`).
+`-Dnative.surefire.skip` skips the JVM mode tests, as the continuous integration does: the test framework of a Quarkus
+`999-SNAPSHOT` may not match the extensions built against the released Quarkus (the extensions themselves work with
+both).
 
 == Probe application
 
@@ -162,6 +167,8 @@ prints nothing (the substitutions that force headless AWT are removed).
 `libjavajpeg`, `liblcms`, `libmlib_image`, `libjava` and `libjvm`.
 * `otool -L target/*-runner | grep CoreFoundation` finds it; `otool -l target/*-runner | grep -A2 LC_RPATH` shows
 `@loader_path`.
+* `otool -l target/*-runner | grep -A4 LC_BUILD_VERSION` shows the `minos` and `sdk` versions of
+`otool -l $JAVA_HOME/bin/java` (for instance 11.0 and 14.5), not the version of the Xcode tools.
 * `nm -u target/libosxui.dylib | grep -E '_(JNU_|JVM_|jio_)'`: each symbol must be in
 `nm -gU target/libjava.dylib target/libjvm.dylib`.
 . *Run*: `./target/*-runner; echo $?`: a window appears, then the exit code is `3`. Expected output:
@@ -170,7 +177,9 @@ prints nothing (the substitutions that force headless AWT are removed).
 * `multiClick` is the double click interval of the system settings, not `500`;
 * `gc=sun.java2d.metal.MTLGraphicsConfig`, and `scale=2.0` on a Retina display;
 * `AppKit Thread` among the threads (and no `Cocoa Run Loop`: AWT renamed the first thread);
-* a Dock icon, the application name in the menu bar, and the AWT button drawn by Aqua.
+* a Dock icon, the application name in the menu bar, and the AWT button drawn by Aqua
+(`lsappinfo info -only name,applicationtype $(lsappinfo find pid=$(pgrep -x macprobe-1.0-runner))` shows the name and
+the `Foreground` type while the window is shown).
 . *Threads*: while the window is shown, `sample $(pgrep -f macprobe) 2 -file /tmp/sample.txt`. The
 `com.apple.main-thread` must show `CFRunLoopRun`, then `+[AWTStarter starter:headless:]`,
 `+[NSApplicationAWT runAWTLoopWithApp:]` and `-[NSApplication run]`. No thread may wait in `_NSThreadPerformInfo wait`.
@@ -179,7 +188,8 @@ prints nothing (the substitutions that force headless AWT are removed).
 `$TMPDIR/quarkus-awt-tmp-fonts/lib/shaders.metallib` and run again: it is written again, and Metal is used.
 . *Exit paths*: change the probe to close with `frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)` (and no timer):
 closing the window exits with `0`; ⌘Q exits with `0`; an exception thrown by `run()` exits with `1`; Ctrl-C in the
-terminal runs the shutdown hooks. The message `System.exit(...) did not complete within ... ms : halting` must never
+terminal runs the shutdown hooks (exit code 130; a process started in the background by a script ignores SIGINT, as with
+the `java` launcher: use `kill -TERM`, exit code 143). The message `System.exit(...) did not complete within ... ms : halting` must never
 appear: note how long the exit takes.
 . *Headless*: `./target/*-runner -Djava.awt.headless=true` does not hang (`headless=true`, no window).
 . *Negative control*: `mvn -B package -Dnative -Dquarkus.native.additional-build-args=-H:+RunMainInNewThread`: the build
