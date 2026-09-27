@@ -78,7 +78,7 @@ Wayland), GTK 3 for the GTK look and feel and the native dialogs, CUPS and ALSA 
 |Yes
 |Yes, with the `quarkus-awt` of the Quarkus pull request
 https://github.com/quarkusio/quarkus/pull/56979["Enable quarkus-awt on macOS"] (not in a Quarkus release yet), and
-GraalVM 25.1 or later (see xref:awt.adoc#macos[macOS]). Implemented and unit tested, but only verifiable on a Mac: see
+GraalVM 25.1 or later (see xref:awt.adoc#macos[macOS]). Verified on an Apple silicon Mac, see
 xref:macos-verification.adoc[Verifying macOS support].
 |===
 
@@ -168,6 +168,11 @@ xref:awt.adoc#exact-reachability-metadata[Exact reachability metadata].
 |`quarkus.desktop.awt.macos.info-plist`
 |`false`
 |macOS: embeds an information property list in the executable.
+
+|`quarkus.desktop.awt.macos.jdk-build-version`
+|`true`
+|macOS: the executable declares the minimum macOS version and SDK version of the `java` launcher of the JDK (the look
+of the windows depends on them), see xref:awt.adoc#macos[macOS].
 
 |`quarkus.desktop.swing.look-and-feel`
 |

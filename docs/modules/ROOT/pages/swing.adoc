@@ -82,7 +82,6 @@ Swing components can be CDI beans: make them `@Singleton` or `@Dependent` beans 
 xref:awt.adoc#_cdi_beans[CDI beans]), and create them on the event dispatch thread.
 
 [[look-and-feel]]
-[[look-and-feel]]
 == Look and feel
 
 Set the look and feel in `application.properties`:

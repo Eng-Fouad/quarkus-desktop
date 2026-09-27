@@ -31,7 +31,7 @@ native executables.
 |---|---|---|
 | Windows x64 | yes | yes (native build on Windows with Visual Studio) |
 | Linux x64 | yes | yes (native build on Linux or in a container; X11 or XWayland at run time) |
-| macOS on Apple silicon | yes | yes, with the quarkus-awt of the Quarkus pull request [Enable quarkus-awt on macOS](https://github.com/quarkusio/quarkus/pull/56979) and GraalVM 25.1 or later (only verifiable on a Mac, see below) |
+| macOS on Apple silicon | yes | yes, with the quarkus-awt of the Quarkus pull request [Enable quarkus-awt on macOS](https://github.com/quarkusio/quarkus/pull/56979) and GraalVM 25.1 or later (verified on an Apple silicon Mac, see below) |
 
 ## Showcase
 
@@ -42,8 +42,9 @@ the functional test bench of these extensions: run its cycle after changing a li
 
 ## Verifying on macOS
 
-The macOS support is unit tested on every platform, but it only runs on a Mac: the check list to run on an Apple
-silicon Mac, and how to report the results, is in [docs/modules/ROOT/pages/macos-verification.adoc](docs/modules/ROOT/pages/macos-verification.adoc).
+The macOS support is unit tested on every platform and was verified on an Apple silicon Mac (the native integration
+tests, the showcase). It only runs on a Mac: the check list to run on an Apple silicon Mac, and how to report the
+results, is in [docs/modules/ROOT/pages/macos-verification.adoc](docs/modules/ROOT/pages/macos-verification.adoc).
 The unit tests also check the macOS lists against a macOS JDK on any platform:
 `./mvnw verify -pl awt/deployment,swing/deployment -am -Dmac.java.home=<an extracted macOS JDK>/Contents/Home`.
 

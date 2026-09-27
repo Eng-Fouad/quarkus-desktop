@@ -224,7 +224,9 @@ command line of the executable, or with `System.setProperty` before AWT starts):
 
 The pipeline in use is the class of the default graphics configuration
 (`GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration()`:
-`D3DGraphicsConfig`, `Win32GraphicsConfig`, `WGLGraphicsConfig`, `XRGraphicsConfig`...). PIPELINES_VERIFIED
+`D3DGraphicsConfig`, `Win32GraphicsConfig`, `WGLGraphicsConfig`, `XRGraphicsConfig`...). The showcase compares JVM
+mode and native executables with another pipeline (`--pipeline=gdi|opengl` on Windows, `--pipeline=x11|opengl` on
+Linux, `-- -Dsun.java2d.metal=false` on macOS).
 
 [[fonts]]
 === Fonts and languages
@@ -377,7 +379,8 @@ and a native executable built with exact metadata and run with `-XX:MissingRegis
 
 The integration tests of the extension build a native executable that shows a window with components and checks fonts,
 ImageIO plugins, print services and printing to a PostScript stream, data flavors, text attributes, Java Sound, the
-JavaBeans API, the desktop integration and the Java Access Bridge, on Windows and Linux. The https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] compares JVM mode and native
+JavaBeans API, the desktop integration and the Java Access Bridge (Windows), on Windows, Linux and macOS (with the
+libraries and frameworks of the macOS executable, its main thread and the Metal pipeline). The https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] compares JVM mode and native
 executables page by page (see xref:index.adoc#verification[Verification]).
 
 == Configuration
