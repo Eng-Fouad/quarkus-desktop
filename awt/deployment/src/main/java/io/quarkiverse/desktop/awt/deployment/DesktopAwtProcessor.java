@@ -570,12 +570,17 @@ class DesktopAwtProcessor {
     // ------------------------------------------------------------------------------------------------ java.home, fonts
 
     /**
-     * The charsets of the JDK font configuration (Windows : windows-125x, GBK, windows-31j, x-windows-949...).
+     * All the charsets : a native executable only has the standard ones otherwise. Fonts in legacy encodings need them on
+     * every platform (the cmap subtables and name records in Shift_JIS, GBK, Big5, EUC-KR or Johab of TrueType fonts :
+     * {@code sun.font.CMap}, {@code TrueTypeFont} ; the encoders of the X11 fonts, {@code sun.font.XMap}), as do the text
+     * transfers in the charsets of other applications and the RTF font charsets of Swing ({@code \fcharset} :
+     * windows-125x, ms932, ms936...). The JDK font configuration of Windows uses windows-125x, GBK, windows-31j,
+     * x-windows-949... : on Windows, the minimal font configuration leaves them out (a smaller native executable).
      */
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void charsets(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config,
             BuildProducer<NativeImageEnableAllCharsetsBuildItem> charsets) {
-        if (platform.isWindows() && config.windows().fontConfiguration() == DesktopAwtConfig.FontConfiguration.JDK) {
+        if (!platform.isWindows() || config.windows().fontConfiguration() == DesktopAwtConfig.FontConfiguration.JDK) {
             charsets.produce(new NativeImageEnableAllCharsetsBuildItem());
         }
     }

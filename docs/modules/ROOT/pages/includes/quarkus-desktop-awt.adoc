@@ -132,7 +132,7 @@ endif::add-copy-button-to-config-props[]
 --
 The logical font configuration (the physical fonts behind the `Dialog`, `SansSerif`, `Serif`, `Monospaced` and `DialogInput` logical fonts, used by AWT components and by default in Swing).
 
-`jdk`, the default, is the font configuration of the JDK used for the native build (its `lib/fontconfig.properties.src` file, embedded in the native executable and extracted to the temporary directory at startup) : the logical fonts display the same scripts as in JVM mode (Arabic, Hebrew, Chinese, Japanese, Korean, Thai, Indic scripts...), and all the charsets of the JDK are included in the native executable, since the font configuration uses many of them. `minimal` is the minimal font configuration of the Quarkus AWT extension (Latin scripts only) : a slightly smaller native executable.
+`jdk`, the default, is the font configuration of the JDK used for the native build (its `lib/fontconfig.properties.src` file, embedded in the native executable and extracted to the temporary directory at startup) : the logical fonts display the same scripts as in JVM mode (Arabic, Hebrew, Chinese, Japanese, Korean, Thai, Indic scripts...), and all the charsets of the JDK are included in the native executable, since the font configuration uses many of them. `minimal` is the minimal font configuration of the Quarkus AWT extension (Latin scripts only) : a slightly smaller native executable, with the standard charsets only (fonts whose names or character maps use a legacy encoding such as Shift_JIS or GBK, and RTF text in other charsets, are then not read as in JVM mode). On Linux and macOS, all the charsets are always included.
 
 
 ifdef::add-copy-button-to-env-var[]

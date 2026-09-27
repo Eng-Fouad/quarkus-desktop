@@ -38,8 +38,10 @@ them*: a class with a `static final Color ACCENT = new Color(0x0096c9)` (or a `F
 initialized at run time, as in JVM mode, instead of failing the native build.
 * The system properties that the `java` launcher sets and a native executable does not have (`sun.java2d.dpiaware` on
 Windows, `apple.awt.application.name` on macOS, `sun.io.unicode.encoding`), and a `java.home` directory with the files
-of the JDK that AWT reads there (the font configuration of the JDK and all the charsets it uses on Windows, the Metal
-shaders of Java2D on macOS).
+of the JDK that AWT reads there (the font configuration of the JDK on Windows, the Metal shaders of Java2D on macOS).
+* All the charsets of the JDK: the JDK font configuration of Windows uses many of them, and fonts whose names or character
+maps use a legacy encoding (Shift_JIS, GBK, Big5...), the text that other applications transfer in their charset and the
+RTF font charsets of Swing need them on every platform.
 * On Windows: the application manifest of the `java` launcher (visual styles of the native controls, per monitor DPI
 awareness), an optional GUI subsystem, and a copy of the Visual {cpp} runtime next to the executable.
 

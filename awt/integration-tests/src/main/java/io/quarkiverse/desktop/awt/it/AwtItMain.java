@@ -55,6 +55,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -249,8 +250,14 @@ public class AwtItMain implements QuarkusApplication {
         String[] families = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames(Locale.ROOT);
         require(families.length > 0, "no font family");
         Font dialog = new Font(Font.DIALOG, Font.PLAIN, 12);
+        // the legacy encodings of fonts (TrueType cmap subtables and names, the Windows font configuration) and of text
+        // (RTF font charsets)
+        for (String charset : new String[] { "Shift_JIS", "GBK", "Big5", "EUC-KR", "windows-1251", "windows-31j" }) {
+            require(Charset.isSupported(charset), charset + " not supported");
+        }
         return "families=" + families.length + " dialog=" + dialog.getFontName(Locale.ROOT).replace(' ', '_')
-                + " arabic=" + (dialog.canDisplay('م')) + " cjk=" + dialog.canDisplay('你');
+                + " arabic=" + (dialog.canDisplay('م')) + " cjk=" + dialog.canDisplay('你') + " charsets="
+                + Charset.availableCharsets().size();
     }
 
     // -------------------------------------------------------------------------------------------------------- ImageIO

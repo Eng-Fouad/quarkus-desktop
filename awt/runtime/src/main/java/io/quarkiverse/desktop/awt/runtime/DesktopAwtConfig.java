@@ -142,7 +142,10 @@ public interface DesktopAwtConfig {
          * directory at startup) : the logical fonts display the same scripts as in JVM mode (Arabic, Hebrew, Chinese,
          * Japanese, Korean, Thai, Indic scripts...), and all the charsets of the JDK are included in the native
          * executable, since the font configuration uses many of them. {@code minimal} is the minimal font configuration
-         * of the Quarkus AWT extension (Latin scripts only) : a slightly smaller native executable.
+         * of the Quarkus AWT extension (Latin scripts only) : a slightly smaller native executable, with the standard
+         * charsets only (fonts whose names or character maps use a legacy encoding such as Shift_JIS or GBK, and RTF
+         * text in other charsets, are then not read as in JVM mode). On Linux and macOS, all the charsets are always
+         * included.
          */
         @WithDefault("jdk")
         FontConfiguration fontConfiguration();
