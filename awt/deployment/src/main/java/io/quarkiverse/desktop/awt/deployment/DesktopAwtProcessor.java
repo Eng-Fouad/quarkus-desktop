@@ -376,7 +376,7 @@ class DesktopAwtProcessor {
                 AwtClassesAndResources.LINUX_REFLECTIVE_METHODS,
                 AwtClassesAndResources.MAC_REFLECTIVE_METHODS)) {
             MemberEntry entry = MemberEntry.method(method);
-            reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, false, entry.className(), entry.name(),
+            reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, entry.className(), entry.name(),
                     entry.parameterTypes()));
         }
         for (String field : platform.withPlatform(AwtClassesAndResources.REFLECTIVE_FIELDS,

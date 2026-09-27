@@ -100,7 +100,7 @@ class DesktopSwingProcessor {
                 SwingClassesAndResources.LINUX_REFLECTIVE_METHODS,
                 SwingClassesAndResources.MAC_REFLECTIVE_METHODS)) {
             MemberEntry entry = MemberEntry.method(method);
-            reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, false, entry.className(), entry.name(),
+            reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, entry.className(), entry.name(),
                     entry.parameterTypes()));
         }
         for (String field : entries(platform, config, SwingClassesAndResources.REFLECTIVE_FIELDS,
@@ -168,11 +168,13 @@ class DesktopSwingProcessor {
             reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, createUI));
         }
         if (!classes.queried.isEmpty()) {
+            // Swing only queries the methods, but Quarkus after 3.40 registers methods for invocation only
             reflectiveClasses.produce(ReflectiveClassBuildItem.builder(classes.queried.toArray(String[]::new))
-                    .constructors(false).queryMethods().reason(REASON).build());
+                    .constructors(false).methods().reason(REASON).build());
         }
         for (Map.Entry<String, MethodInfo> handler : classes.inputMethodHandlers.entrySet()) {
-            reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, true, handler.getValue()));
+            // Swing only looks the method up, but Quarkus after 3.40 registers methods for invocation only
+            reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, handler.getValue()));
         }
         lookups.produce(new ReachabilityLookupsBuildItem(List.of(), classes.inputMethodLookups,
                 classes.lookAndFeelIconGlobs));
