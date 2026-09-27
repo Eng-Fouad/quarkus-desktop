@@ -146,6 +146,7 @@ final class MacExecutable {
 
     private static final int MH_MAGIC_64 = 0xfeedfacf;
     private static final int FAT_MAGIC = 0xcafebabe;
+    private static final int FAT_MAGIC_64 = 0xcafebabf;
     private static final int CPU_TYPE_ARM64 = 0x0100000c;
     private static final int CPU_TYPE_X86_64 = 0x01000007;
     private static final int LC_VERSION_MIN_MACOSX = 0x24;
@@ -160,17 +161,21 @@ final class MacExecutable {
      */
     static Optional<BuildVersion> buildVersion(byte[] file) {
         ByteBuffer buffer = ByteBuffer.wrap(file).order(ByteOrder.BIG_ENDIAN);
-        if (file.length >= 8 && buffer.getInt(0) == FAT_MAGIC) {
+        if (file.length >= 8 && (buffer.getInt(0) == FAT_MAGIC || buffer.getInt(0) == FAT_MAGIC_64)) {
             // the build runs on the target platform (no cross compilation)
             int wanted = "x86_64".equals(System.getProperty("os.arch")) ? CPU_TYPE_X86_64 : CPU_TYPE_ARM64;
-            int count = buffer.getInt(4);
-            for (int i = 0; i < count && 8 + 20 * (i + 1) <= file.length; i++) {
-                int entry = 8 + 20 * i;
+            // fat_arch : cputype, cpusubtype, offset, size, align (20 bytes) ; fat_arch_64 : 64-bit offset and size, and
+            // a reserved field (32 bytes)
+            boolean fat64 = buffer.getInt(0) == FAT_MAGIC_64;
+            int entrySize = fat64 ? 32 : 20;
+            long count = Integer.toUnsignedLong(buffer.getInt(4));
+            for (long i = 0; i < count && 8 + entrySize * (i + 1) <= file.length; i++) {
+                int entry = (int) (8 + entrySize * i);
                 if (buffer.getInt(entry) == wanted) {
-                    int offset = buffer.getInt(entry + 8);
-                    int size = buffer.getInt(entry + 12);
-                    if (offset >= 0 && size > 0 && (long) offset + size <= file.length) {
-                        return buildVersion(java.util.Arrays.copyOfRange(file, offset, offset + size));
+                    long offset = fat64 ? buffer.getLong(entry + 8) : Integer.toUnsignedLong(buffer.getInt(entry + 8));
+                    long size = fat64 ? buffer.getLong(entry + 16) : Integer.toUnsignedLong(buffer.getInt(entry + 12));
+                    if (offset >= 0 && size > 0 && offset + size <= file.length) {
+                        return buildVersion(java.util.Arrays.copyOfRange(file, (int) offset, (int) (offset + size)));
                     }
                 }
             }
@@ -180,16 +185,19 @@ final class MacExecutable {
         if (file.length < 32 || buffer.getInt(0) != MH_MAGIC_64) {
             return Optional.empty();
         }
-        int commands = buffer.getInt(16);
-        int offset = 32;
-        for (int i = 0; i < commands && offset + 8 <= file.length; i++) {
-            int command = buffer.getInt(offset);
-            int size = buffer.getInt(offset + 4);
-            if (command == LC_BUILD_VERSION && offset + 16 <= file.length && buffer.getInt(offset + 8) == PLATFORM_MACOS) {
-                return Optional.of(new BuildVersion(version(buffer.getInt(offset + 12)), version(buffer.getInt(offset + 16))));
+        long commands = Integer.toUnsignedLong(buffer.getInt(16));
+        long offset = 32;
+        for (long i = 0; i < commands && offset + 8 <= file.length; i++) {
+            int at = (int) offset;
+            int command = buffer.getInt(at);
+            long size = Integer.toUnsignedLong(buffer.getInt(at + 4));
+            // build_version_command : cmd, cmdsize, platform, minos, sdk (20 bytes, then the tools)
+            if (command == LC_BUILD_VERSION && offset + 20 <= file.length && buffer.getInt(at + 8) == PLATFORM_MACOS) {
+                return Optional.of(new BuildVersion(version(buffer.getInt(at + 12)), version(buffer.getInt(at + 16))));
             }
+            // version_min_command : cmd, cmdsize, version, sdk (16 bytes)
             if (command == LC_VERSION_MIN_MACOSX && offset + 16 <= file.length) {
-                return Optional.of(new BuildVersion(version(buffer.getInt(offset + 8)), version(buffer.getInt(offset + 12))));
+                return Optional.of(new BuildVersion(version(buffer.getInt(at + 8)), version(buffer.getInt(at + 12))));
             }
             if (size < 8) {
                 break;
@@ -206,7 +214,7 @@ final class MacExecutable {
         Path launcher = jdkHome.resolve("bin").resolve("java");
         try {
             return Files.isRegularFile(launcher) ? buildVersion(Files.readAllBytes(launcher)) : Optional.empty();
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             LOGGER.debugf(e, "Unable to read %s", launcher);
             return Optional.empty();
         }

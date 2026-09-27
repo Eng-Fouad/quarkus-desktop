@@ -535,6 +535,9 @@ class DesktopAwtProcessor {
                 AwtClassesAndResources.WINDOWS_RESOURCE_GLOBS,
                 AwtClassesAndResources.LINUX_RESOURCE_GLOBS,
                 AwtClassesAndResources.MAC_RESOURCE_GLOBS))));
+        // the files of the JDK that the recorder extracts into java.home at startup, absent when the JDK of the build has
+        // none (a JDK without Metal shaders) : not found, instead of a MissingResourceRegistrationError
+        globs.add(DesktopAwtRecorder.RESOURCES + "*");
         lookups.produce(new ReachabilityLookupsBuildItem(types, List.of(platform.withPlatform(
                 AwtClassesAndResources.METHOD_LOOKUPS,
                 AwtClassesAndResources.WINDOWS_METHOD_LOOKUPS,

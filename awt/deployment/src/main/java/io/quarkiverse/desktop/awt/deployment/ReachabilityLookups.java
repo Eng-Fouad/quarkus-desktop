@@ -170,24 +170,51 @@ public final class ReachabilityLookups {
 
     /**
      * The modules of the JDK that have the directory of the given resource glob (the part before its first wildcard).
+     * The build runs on the JDK of the host, which lacks the directories of another platform : a Linux executable built
+     * in a container from a macOS or Windows host has the GTK look and feel ({@code com/sun/java/swing/plaf/gtk}). A
+     * directory that no module has is then looked up through its parent directories, at least three levels deep, and
+     * belongs to the module of the first parent that a single module has ({@code com/sun/java/swing/plaf} :
+     * {@code java.desktop}).
      *
-     * @return module names, sorted, empty when no module has the directory
+     * @return module names, sorted, empty when no module has the directory or such a parent
      */
     public static Set<String> modules(String glob) {
-        Set<String> modules = new TreeSet<>();
         int wildcard = indexOfWildcard(glob);
         int slash = glob.lastIndexOf('/', wildcard < 0 ? glob.length() : wildcard);
         if (slash <= 0) {
-            return modules;
+            return new TreeSet<>();
         }
         String directory = glob.substring(0, slash);
         FileSystem jrt = FileSystems.getFileSystem(URI.create("jrt:/"));
+        Set<String> modules = modulesWithDirectory(jrt, directory);
+        for (String parent = parent(directory); modules.isEmpty() && parent != null; parent = parent(parent)) {
+            Set<String> parentModules = modulesWithDirectory(jrt, parent);
+            if (parentModules.size() == 1) {
+                modules = parentModules;
+            } else if (!parentModules.isEmpty()) {
+                break;
+            }
+        }
+        return modules;
+    }
+
+    private static Set<String> modulesWithDirectory(FileSystem jrt, String directory) {
+        Set<String> modules = new TreeSet<>();
         for (Module module : ModuleLayer.boot().modules()) {
             if (Files.isDirectory(jrt.getPath("/modules", module.getName(), directory))) {
                 modules.add(module.getName());
             }
         }
         return modules;
+    }
+
+    /**
+     * The parent of a directory, or {@code null} below three levels.
+     */
+    private static String parent(String directory) {
+        int slash = directory.lastIndexOf('/');
+        String parent = slash < 0 ? null : directory.substring(0, slash);
+        return parent != null && parent.chars().filter(c -> c == '/').count() >= 2 ? parent : null;
     }
 
     private static int indexOfWildcard(String glob) {

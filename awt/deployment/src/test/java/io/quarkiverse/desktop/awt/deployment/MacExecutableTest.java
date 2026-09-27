@@ -9,6 +9,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -107,6 +108,33 @@ class MacExecutableTest {
         fat.put(x86).put(arm64);
         String minimum = "x86_64".equals(System.getProperty("os.arch")) ? "10.15" : "12.0";
         assertEquals(Optional.of(new MacExecutable.BuildVersion(minimum, "15.0")), MacExecutable.buildVersion(fat.array()));
+
+        // fat_arch_64 entries : 64-bit offsets and sizes, a reserved field
+        ByteBuffer fat64 = ByteBuffer.allocate(8 + 2 * 32 + x86.length + arm64.length).order(ByteOrder.BIG_ENDIAN);
+        fat64.putInt(0xcafebabf).putInt(2);
+        int offset64 = 8 + 2 * 32;
+        fat64.putInt(0x01000007).putInt(3).putLong(offset64).putLong(x86.length).putInt(12).putInt(0);
+        fat64.putInt(0x0100000c).putInt(0).putLong(offset64 + x86.length).putLong(arm64.length).putInt(12).putInt(0);
+        fat64.put(x86).put(arm64);
+        assertEquals(Optional.of(new MacExecutable.BuildVersion(minimum, "15.0")), MacExecutable.buildVersion(fat64.array()));
+    }
+
+    @Test
+    void malformedFiles() {
+        byte[] buildVersion = machO(command(0x32, 24, 1, 0x000b0000, 0x000e0500, 0));
+        // truncated in the sdk field of LC_BUILD_VERSION, or in its minos field
+        assertEquals(Optional.empty(), MacExecutable.buildVersion(Arrays.copyOf(buildVersion, 32 + 18)));
+        assertEquals(Optional.empty(), MacExecutable.buildVersion(Arrays.copyOf(buildVersion, 32 + 14)));
+        // a load command size that would overflow the offset
+        byte[] huge = machO(command(0x19, 16), command(0x32, 24, 1, 0x000b0000, 0x000e0500, 0));
+        ByteBuffer.wrap(huge).order(ByteOrder.LITTLE_ENDIAN).putInt(32 + 4, 0x7ffffff8);
+        assertEquals(Optional.empty(), MacExecutable.buildVersion(huge));
+        // a fat header whose entries point outside the file, or with more entries than the file holds
+        ByteBuffer fat = ByteBuffer.allocate(8 + 20).order(ByteOrder.BIG_ENDIAN);
+        fat.putInt(0xcafebabe).putInt(0x7fffffff);
+        fat.putInt("x86_64".equals(System.getProperty("os.arch")) ? 0x01000007 : 0x0100000c).putInt(0).putInt(0x7ffffff0)
+                .putInt(0x7ffffff0).putInt(12);
+        assertEquals(Optional.empty(), MacExecutable.buildVersion(fat.array()));
     }
 
     /**

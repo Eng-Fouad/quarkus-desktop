@@ -26,6 +26,18 @@ class ResourceGlobsTest {
     }
 
     @Test
+    void directoriesOfAnotherPlatform() {
+        // a directory that the JDK of the host lacks (the look and feel of another platform) : the module of its parent
+        assertEquals(Set.of("java.desktop"), ReachabilityLookups.modules("com/sun/java/swing/plaf/nosuchlaf/icons/*"));
+        assertEquals(Set.of("java.desktop"), ReachabilityLookups.modules("sun/awt/resources/nosuch/*.properties"));
+        // no parent at least three levels deep that a single module has : the class path
+        assertEquals(Set.of(), ReachabilityLookups.modules("com/example/laf/icons/*"));
+        assertEquals(Set.of(), ReachabilityLookups.modules("META-INF/nosuch/services/*"));
+        assertEquals(Set.of(), ReachabilityLookups.modules("sun/nosuch/resources/*"));
+        assertEquals(Set.of(), ReachabilityLookups.modules("nosuch.properties"));
+    }
+
+    @Test
     void patterns() {
         List<NativeImageResourcePatternsBuildItem> patterns = ResourceGlobs.patterns(GLOBS);
         // one item per module with the Quarkus versions that register module resources, else one item

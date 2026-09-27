@@ -74,7 +74,9 @@ public class ReportFailures {
         List<Annotation> tests = failedTests(root);
         List<Annotation> build = new ArrayList<>();
         if (args.length > 0 && Files.isRegularFile(Path.of(args[0]))) {
-            build.addAll(mavenErrors(root, Files.readAllLines(Path.of(args[0]), StandardCharsets.UTF_8)));
+            // lenient : a log written in another encoding (Windows runners) has bytes that are not UTF-8
+            build.addAll(mavenErrors(root, new String(Files.readAllBytes(Path.of(args[0])), StandardCharsets.UTF_8)
+                    .lines().toList()));
         }
         // the build errors first (compilation errors, failed goals), then as many failed tests as fit
         List<Annotation> annotations = new ArrayList<>(build.subList(0, Math.min(build.size(), MAX_ANNOTATIONS / 2)));
@@ -155,7 +157,8 @@ public class ReportFailures {
      * The compilation errors (with their file and line) and the other errors of the Maven log (failed goals...).
      */
     static List<Annotation> mavenErrors(Path root, List<String> log) {
-        List<Annotation> annotations = new ArrayList<>();
+        // Maven prints each compilation error twice (the COMPILATION ERROR block, then the failed goal)
+        Set<Annotation> compilation = new LinkedHashSet<>();
         Set<String> others = new LinkedHashSet<>();
         for (String line : log) {
             // without colors, and without the timestamp that GitHub puts before the lines of a downloaded step log
@@ -167,13 +170,14 @@ public class ReportFailures {
             Matcher compiler = COMPILER_ERROR.matcher(clean);
             if (compiler.matches()) {
                 Path file = Path.of(compiler.group(1));
-                annotations.add(new Annotation("Compilation error", file.isAbsolute() ? relative(root, file)
+                compilation.add(new Annotation("Compilation error", file.isAbsolute() ? relative(root, file)
                         : compiler.group(1), Integer.parseInt(compiler.group(2)), Integer.parseInt(compiler.group(3)),
                         compiler.group(4)));
             } else if (NOISE.stream().noneMatch(p -> p.matcher(clean).matches())) {
                 others.add(clean.substring("[ERROR]".length()).strip());
             }
         }
+        List<Annotation> annotations = new ArrayList<>(compilation);
         if (!others.isEmpty()) {
             annotations.add(new Annotation("Maven errors", null, 0, 0, limitLines(String.join("\n", others))));
         }
