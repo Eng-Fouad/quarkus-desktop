@@ -160,21 +160,34 @@ public final class ReachabilityLookups {
      */
     public static Set<String> moduleGlobs(Collection<String> globs) {
         Set<String> moduleGlobs = new TreeSet<>();
-        FileSystem jrt = FileSystems.getFileSystem(URI.create("jrt:/"));
         for (String glob : globs) {
-            int wildcard = indexOfWildcard(glob);
-            int slash = glob.lastIndexOf('/', wildcard < 0 ? glob.length() : wildcard);
-            if (slash <= 0) {
-                continue;
-            }
-            String directory = glob.substring(0, slash);
-            for (Module module : ModuleLayer.boot().modules()) {
-                if (Files.isDirectory(jrt.getPath("/modules", module.getName(), directory))) {
-                    moduleGlobs.add(module.getName() + ":" + glob);
-                }
+            for (String module : modules(glob)) {
+                moduleGlobs.add(module + ":" + glob);
             }
         }
         return moduleGlobs;
+    }
+
+    /**
+     * The modules of the JDK that have the directory of the given resource glob (the part before its first wildcard).
+     *
+     * @return module names, sorted, empty when no module has the directory
+     */
+    public static Set<String> modules(String glob) {
+        Set<String> modules = new TreeSet<>();
+        int wildcard = indexOfWildcard(glob);
+        int slash = glob.lastIndexOf('/', wildcard < 0 ? glob.length() : wildcard);
+        if (slash <= 0) {
+            return modules;
+        }
+        String directory = glob.substring(0, slash);
+        FileSystem jrt = FileSystems.getFileSystem(URI.create("jrt:/"));
+        for (Module module : ModuleLayer.boot().modules()) {
+            if (Files.isDirectory(jrt.getPath("/modules", module.getName(), directory))) {
+                modules.add(module.getName());
+            }
+        }
+        return modules;
     }
 
     private static int indexOfWildcard(String glob) {

@@ -641,12 +641,11 @@ class DesktopAwtProcessor {
         for (String bundle : AwtClassesAndResources.ABSENT_RESOURCE_BUNDLES) {
             bundles.produce(new NativeImageResourceBundleBuildItem(bundle));
         }
-        resources.produce(NativeImageResourcePatternsBuildItem.builder()
-                .includeGlobs(platform.withPlatform(AwtClassesAndResources.RESOURCE_GLOBS,
-                        AwtClassesAndResources.WINDOWS_RESOURCE_GLOBS,
-                        AwtClassesAndResources.LINUX_RESOURCE_GLOBS,
-                        AwtClassesAndResources.MAC_RESOURCE_GLOBS))
-                .build());
+        // resources of the JDK modules (see ResourceGlobs)
+        ResourceGlobs.patterns(List.of(platform.withPlatform(AwtClassesAndResources.RESOURCE_GLOBS,
+                AwtClassesAndResources.WINDOWS_RESOURCE_GLOBS,
+                AwtClassesAndResources.LINUX_RESOURCE_GLOBS,
+                AwtClassesAndResources.MAC_RESOURCE_GLOBS))).forEach(resources::produce);
     }
 
     // --------------------------------------------------------------------------------------------- run time defaults

@@ -18,6 +18,7 @@ import io.quarkiverse.desktop.awt.deployment.MemberEntry;
 import io.quarkiverse.desktop.awt.deployment.ReachabilityLookups;
 import io.quarkiverse.desktop.awt.deployment.ReachabilityLookupsBuildItem;
 import io.quarkiverse.desktop.awt.deployment.ReflectivePublicMembersBuildItem;
+import io.quarkiverse.desktop.awt.deployment.ResourceGlobs;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingBuildTimeConfig;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingBuildTimeConfig.IncludedLookAndFeel;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingRecorder;
@@ -336,12 +337,11 @@ class DesktopSwingProcessor {
             // Without module name : see the Desktop AWT extension
             bundles.produce(new NativeImageResourceBundleBuildItem(bundle));
         }
-        resources.produce(NativeImageResourcePatternsBuildItem.builder()
-                .includeGlobs(entries(platform, config, SwingClassesAndResources.RESOURCE_GLOBS,
-                        SwingClassesAndResources.WINDOWS_RESOURCE_GLOBS,
-                        SwingClassesAndResources.LINUX_RESOURCE_GLOBS,
-                        SwingClassesAndResources.MAC_RESOURCE_GLOBS))
-                .build());
+        // resources of the JDK modules (see the ResourceGlobs of the Desktop AWT extension)
+        ResourceGlobs.patterns(List.of(entries(platform, config, SwingClassesAndResources.RESOURCE_GLOBS,
+                SwingClassesAndResources.WINDOWS_RESOURCE_GLOBS,
+                SwingClassesAndResources.LINUX_RESOURCE_GLOBS,
+                SwingClassesAndResources.MAC_RESOURCE_GLOBS))).forEach(resources::produce);
     }
 
     // ---------------------------------------------------------------------------------------------- look and feel
