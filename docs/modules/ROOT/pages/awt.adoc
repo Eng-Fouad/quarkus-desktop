@@ -100,6 +100,7 @@ and feel or an editor kit of the application) are the ones of the running applic
 Build a native executable as usual (`./mvnw package -Dnative`). The JDK AWT libraries are not linked in the executable:
 they are copied next to it, and the executable needs them at run time.
 
+[[windows]]
 === Windows
 
 The native build needs Visual Studio (the {cpp} build tools), as any Quarkus native build on Windows, and must run on
@@ -117,6 +118,7 @@ never rename the executable after the build (set `quarkus.package.output-name` i
 The executable is a console application by default: set `quarkus.desktop.awt.windows.subsystem=windows` for an
 application without console window (as `javaw`).
 
+[[linux]]
 === Linux
 
 The native executable uses the X11 libraries of the system, and the display of the `DISPLAY` environment variable
@@ -198,6 +200,21 @@ Native executables are DPI aware by default, as a JVM started by the `java` laun
 the scale factor of the display (`sun.java2d.dpiaware` defaults to `true`, and the manifest declares per monitor DPI
 awareness). Set `quarkus.desktop.awt.windows.dpi-aware=false` to let Windows stretch the windows instead.
 
+[[pipelines]]
+=== Java2D pipelines
+
+Native executables render with the same Java2D pipelines as the JDK, selected with the same system properties (on the
+command line of the executable, or with `System.setProperty` before AWT starts):
+
+* Windows: Direct3D by default, GDI with `-Dsun.java2d.d3d=false`, OpenGL (WGL) with `-Dsun.java2d.opengl=true`
+(`-Dsun.java2d.opengl=True` prints whether it is enabled);
+* Linux: XRender by default, X11 with `-Dsun.java2d.xrender=false`, OpenGL (GLX) with `-Dsun.java2d.opengl=true`;
+* macOS: Metal by default, OpenGL with `-Dsun.java2d.metal=false`.
+
+The pipeline in use is the class of the default graphics configuration
+(`GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration()`:
+`D3DGraphicsConfig`, `Win32GraphicsConfig`, `WGLGraphicsConfig`, `XRGraphicsConfig`...). PIPELINES_VERIFIED
+
 [[fonts]]
 === Fonts and languages
 
@@ -255,18 +272,105 @@ it, and 106.2 MB for its AWT only variant), 0.34 MB for the Swing integration te
 `quarkus.native.headless` (`true` by default) only applies to the native image builder: it has no effect on the native
 executable, which is headless only when there is no display. Keep the default.
 
+[[exact-reachability-metadata]]
+=== Exact reachability metadata
+
+With the GraalVM option `--exact-reachability-metadata`
+(`-Dquarkus.native.additional-build-args=--exact-reachability-metadata`), a native executable is strict: a reflection,
+resource or JNI lookup that its metadata does not register fails with a `MissingReflectionRegistrationError` (or a
+`MissingResourceRegistrationError`, a `MissingJNIRegistrationError`), instead of answering as if the class, member or
+resource did not exist. It validates the metadata of an application: run the executable with
+`-XX:MissingRegistrationReportingMode=Warn` to get every missing registration in the output (with the stack of the
+lookup) instead of the first error.
+
+The JDK desktop code looks up many things that usually do not exist, and expects not to find them: the JavaBeans API
+probes `java.awt.ButtonBeanInfo`, `java.awt.ButtonCustomizer`, `java.awt.ButtonPersistenceDelegate`,
+`java.beans.MetaData$java_awt_Button_PersistenceDelegate` and `java.awt.ButtonEditor` for the classes it handles,
+`Component` checks whether each component class of the application declares `coalesceEvents`, Nimbus probes a class for
+each region name, `ResourceBundle` looks for `.properties` files next to the bundle classes of the JDK, ImageIO, printing,
+Java Sound, accessibility and input methods look for `META-INF/services` files of the application... With exact
+metadata, each of these lookups fails with an error that the JDK does not expect. The extensions register them, so that
+an application can use exact metadata:
+
+* the lookups of the JDK desktop code expected to fail, for the features that the extensions support, and the JavaBeans
+probes of the JDK classes that they register for the JavaBeans API (with their supertypes, whose members the JavaBeans
+API queries);
+* for the application, the lookups computed from its classes (the Jandex index): `coalesceEvents` for its components,
+`processInputMethodEvent` for its text components, the icons of its look and feels;
+* the var handles that Java2D and the fonts use to access native memory (Foreign Function and Memory API).
+
+These registrations are added when `quarkus.native.additional-build-args` or `quarkus.native.additional-build-args-append`
+contains `--exact-reachability-metadata` (or `-H:ThrowMissingRegistrationErrors`), or with
+`quarkus.desktop.awt.exact-reachability-metadata=true` when the option is given another way. They make a native
+executable about 0.3 MB larger, and are useless without the option.
+
+The application registers its own lookups, as it registers its own classes, in a
+`src/main/resources/META-INF/native-image/<group>/<artifact>/reachability-metadata.json` file: a class that does not
+exist is registered as a type, and the lookup then fails with a `ClassNotFoundException` as without exact metadata. For
+instance, for a bean `com.example.Ticket` that `XMLEncoder` writes and the `Introspector` reads, and the configuration
+files that Quarkus looks up at run time:
+
+[source,json]
+----
+{
+  "reflection": [
+    { "type": "com.example.Ticket" },
+    { "type": "com.example.TicketBeanInfo" },
+    { "type": "com.example.TicketCustomizer" },
+    { "type": "com.example.TicketPersistenceDelegate" },
+    { "type": "java.beans.MetaData$com_example_Ticket_PersistenceDelegate" }
+  ],
+  "resources": [
+    { "glob": "application.properties" },
+    { "glob": "application-prod.properties" },
+    { "glob": "META-INF/microprofile-config.properties" }
+  ]
+}
+----
+
+The showcase (see xref:index.adoc#verification[Verification]) runs all its pages with exact metadata and no missing
+registration on Windows, in both of its variants, with its own application registrations in its
+`reachability-metadata.json`. GraalVM 25.0.0 note: with `-XX:MissingRegistrationReportingMode=Warn`, opening the URL of
+a resource that is not registered (for instance an image of an HTML page that does not exist) fails with a
+`ClassCastException` after the warning, instead of a `FileNotFoundException`: register such resources.
+
 [[limitations]]
 === Limitations
 
-* `SplashScreen.getSplashScreen()` returns `null`: the splash screen is shown by the `java` launcher.
+Native executables differ from JVM mode where GraalVM or the `java` launcher make the difference:
+
+* `SplashScreen.getSplashScreen()` returns `null`: the splash screen is shown by the `java` launcher (`-splash:`,
+`SplashScreen-Image`).
+* `java.home` is a directory that the extension creates in the temporary directory (with the font configuration and the
+PostScript font names of the JDK), `java.class.path` is empty, `sun.boot.library.path` and `sun.java.launcher` are not
+set, and `sun.java2d.dpiaware` is `true` on Windows (see `quarkus.desktop.awt.windows.dpi-aware`).
+* Class path resources have `resource:` URLs instead of `jar:` or `file:` URLs.
+* The locales are those of `quarkus.locales` (all of them in JVM mode): the texts of AWT and Swing, and the number and date
+formats of the other languages, need their locale there.
+* `BreakIterator` returns the break iterators of the default locale of the build, whatever the locale: the dictionary
+based line and word breaks of Thai (and of the other languages that need a dictionary) are not available.
+* `java.lang.reflect.Array.get` boxes the elements of primitive arrays with `Integer.valueOf` (and the other `valueOf`
+methods), which returns cached instances for small values, where the JVM creates new ones: code that compares these
+values by identity behaves differently (for instance `XMLEncoder` writing an `int[]` whose elements equal a constant that
+it already wrote).
 * Classes loaded by name that the extension does not know (third party look and feels, image readers, custom accessibility
-providers...) need their own native image metadata, for instance with `@RegisterForReflection`.
-* Every feature of AWT is not tested yet in native executables: please report the ones that fail. The native image
-tracing agent gives the missing metadata:
+providers...) need their own native image metadata, for instance with `@RegisterForReflection`. The providers of the
+application and of its libraries for the desktop services of the JDK (ImageIO plugins, print services, sound providers,
+input methods, accessibility providers) found in `META-INF/services` files are registered.
+* Please report the features that fail in a native executable. The native image tracing agent gives the missing metadata:
 `java -agentlib:native-image-agent=config-output-dir=src/main/resources/META-INF/native-image/<group>/<artifact> -jar target/quarkus-app/quarkus-run.jar`,
-and a native executable built with `-Dquarkus.native.additional-build-args=--exact-reachability-metadata` and run with
-`-XX:MissingRegistrationReportingMode=Warn` lists them.
+and a native executable built with exact metadata and run with `-XX:MissingRegistrationReportingMode=Warn` lists them
+(see <<exact-reachability-metadata>>).
+
+== Verification
+
+The integration tests of the extension build a native executable that shows a window with components and checks fonts,
+ImageIO plugins, print services and printing to a PostScript stream, data flavors, text attributes, Java Sound, the
+JavaBeans API, the desktop integration and the Java Access Bridge, on Windows and Linux. The https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] compares JVM mode and native
+executables page by page (see xref:index.adoc#verification[Verification]).
 
 == Configuration
+
+See xref:index.adoc#configuration[the overview of the properties].
 
 include::includes/quarkus-desktop-awt.adoc[leveloffset=+1, opts=optional]

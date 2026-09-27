@@ -12,7 +12,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.HexFormat;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -62,6 +64,7 @@ import io.quarkus.deployment.builditem.nativeimage.ReflectiveFieldBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveMethodBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedClassBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.RuntimeInitializedPackageBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.UnsupportedOSBuildItem;
 import io.quarkus.deployment.pkg.NativeConfig;
 import io.quarkus.deployment.pkg.builditem.ArtifactResultBuildItem;
@@ -73,6 +76,7 @@ import io.quarkus.deployment.pkg.steps.NativeBuild;
 import io.quarkus.deployment.pkg.steps.NativeOrNativeSourcesBuild;
 import io.quarkus.maven.dependency.ArtifactKey;
 import io.quarkus.maven.dependency.ResolvedDependency;
+import io.quarkus.runtime.LocalesBuildTimeConfig;
 import io.smallrye.common.os.OS;
 
 // NativeOrNativeSourcesBuild and NativeBuild are deprecated, but Quarkus core has no replacement yet
@@ -173,6 +177,7 @@ class DesktopAwtProcessor {
 
     private static final DotName COMPONENT = DotName.createSimple("java.awt.Component");
     private static final DotName AWT_EVENT = DotName.createSimple("java.awt.AWTEvent");
+    private static final String COALESCE_EVENTS = "#coalesceEvents(java.awt.AWTEvent,java.awt.AWTEvent)";
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -457,19 +462,140 @@ class DesktopAwtProcessor {
 
     /**
      * AWT checks with reflection whether a component class overrides {@code coalesceEvents}
-     * ({@code Component.isCoalesceEventsOverriden}) : register the method of the application classes that declare it.
+     * ({@code Component.isCoalesceEventsOverriden}, for every class of the class loader of the application) : register
+     * the method of the application classes that declare it, and the lookup of the method in the other ones (for
+     * {@code --exact-reachability-metadata}).
      */
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void coalesceEventsOverrides(CombinedIndexBuildItem combinedIndex,
-            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
+            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
+            BuildProducer<ReachabilityLookupsBuildItem> lookups) {
+        List<String> undeclared = new ArrayList<>();
         for (ClassInfo classInfo : combinedIndex.getIndex().getKnownClasses()) {
+            if (classInfo.isInterface() || classInfo.superName() == null) {
+                continue;
+            }
             MethodInfo method = classInfo.method("coalesceEvents", org.jboss.jandex.Type.create(AWT_EVENT,
                     org.jboss.jandex.Type.Kind.CLASS),
                     org.jboss.jandex.Type.create(AWT_EVENT, org.jboss.jandex.Type.Kind.CLASS));
-            if (method != null && isComponent(classInfo.name(), combinedIndex.getIndex())) {
+            if (!isComponent(classInfo.name(), combinedIndex.getIndex())) {
+                continue;
+            }
+            if (method != null) {
                 reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, method));
+            } else {
+                undeclared.add(classInfo.name().toString() + COALESCE_EVENTS);
             }
         }
+        lookups.produce(new ReachabilityLookupsBuildItem(List.of(), undeclared, List.of()));
+    }
+
+    // ------------------------------------------------------------------------------------ exact reachability metadata
+
+    /**
+     * The lookups of the lists ({@code REFLECTIVE_TYPES}, {@code NEGATIVE_CLASS_LOOKUPS}, {@code METHOD_LOOKUPS}) and the
+     * ones computed from names : the JavaBeans probes of the classes registered for the JavaBeans API (by this extension
+     * and the Swing extension) with their supertypes and serialized forms, the {@code .properties} files next to the
+     * resource bundles of the lists, the module resources of the resource globs of the lists, and the resource bundles of the
+     * JDK that do not
+     * exist, for the locales of the application.
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void reachabilityLookups(DesktopTargetPlatformBuildItem platform, LocalesBuildTimeConfig locales,
+            List<ReflectivePublicMembersBuildItem> publicMembers,
+            BuildProducer<ReachabilityLookupsBuildItem> lookups) {
+        String[] reflectiveTypes = platform.withPlatform(AwtClassesAndResources.REFLECTIVE_TYPES,
+                AwtClassesAndResources.WINDOWS_REFLECTIVE_TYPES,
+                AwtClassesAndResources.LINUX_REFLECTIVE_TYPES,
+                AwtClassesAndResources.MAC_REFLECTIVE_TYPES);
+        Set<String> types = new TreeSet<>(List.of(reflectiveTypes));
+        types.addAll(List.of(platform.withPlatform(AwtClassesAndResources.NEGATIVE_CLASS_LOOKUPS,
+                AwtClassesAndResources.WINDOWS_NEGATIVE_CLASS_LOOKUPS,
+                AwtClassesAndResources.LINUX_NEGATIVE_CLASS_LOOKUPS,
+                AwtClassesAndResources.MAC_NEGATIVE_CLASS_LOOKUPS)));
+        // the JavaBeans API probes the classes it handles : the classes registered with their public members and the
+        // values of the REFLECTIVE_TYPES lists (not the var handles of java.lang.invoke)
+        Set<String> javaBeansClasses = new TreeSet<>();
+        for (ReflectivePublicMembersBuildItem item : publicMembers) {
+            javaBeansClasses.addAll(item.getClassNames());
+        }
+        for (String type : reflectiveTypes) {
+            if (!type.startsWith("java.lang.invoke.")) {
+                javaBeansClasses.add(type);
+            }
+        }
+        types.addAll(ReachabilityLookups.javaBeansTypes(javaBeansClasses));
+        Set<String> globs = new TreeSet<>(ReachabilityLookups.bundlePropertiesGlobs(List.of(platform.withPlatform(
+                AwtClassesAndResources.RESOURCE_BUNDLES,
+                AwtClassesAndResources.WINDOWS_RESOURCE_BUNDLES,
+                AwtClassesAndResources.LINUX_RESOURCE_BUNDLES,
+                AwtClassesAndResources.MAC_RESOURCE_BUNDLES))));
+        globs.addAll(ReachabilityLookups.javaBeansSerializedForms(javaBeansClasses));
+        globs.addAll(ReachabilityLookups.moduleGlobs(List.of(platform.withPlatform(AwtClassesAndResources.RESOURCE_GLOBS,
+                AwtClassesAndResources.WINDOWS_RESOURCE_GLOBS,
+                AwtClassesAndResources.LINUX_RESOURCE_GLOBS,
+                AwtClassesAndResources.MAC_RESOURCE_GLOBS))));
+        lookups.produce(new ReachabilityLookupsBuildItem(types, List.of(platform.withPlatform(
+                AwtClassesAndResources.METHOD_LOOKUPS,
+                AwtClassesAndResources.WINDOWS_METHOD_LOOKUPS,
+                AwtClassesAndResources.LINUX_METHOD_LOOKUPS,
+                AwtClassesAndResources.MAC_METHOD_LOOKUPS)), globs));
+        Set<Locale> applicationLocales = new LinkedHashSet<>(locales.locales());
+        locales.defaultLocale().ifPresent(applicationLocales::add);
+        lookups.produce(ReachabilityLookups.missingBundles(AwtClassesAndResources.ABSENT_RESOURCE_BUNDLES,
+                applicationLocales, "java.desktop"));
+    }
+
+    /**
+     * The providers of the application and of its libraries for the services of the JDK desktop modules that the JDK
+     * also looks up on the class path (ImageIO plugins, print services, sound providers...), and the lookups of these
+     * service files.
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void classPathServices(BuildProducer<ServiceProviderBuildItem> serviceProviders,
+            BuildProducer<ReachabilityLookupsBuildItem> lookups) {
+        List<String> files = new ArrayList<>();
+        for (String service : AwtClassesAndResources.CLASS_PATH_SERVICES) {
+            ServiceProviderBuildItem providers = ServiceProviderBuildItem.allProvidersFromClassPath(service);
+            if (!providers.providers().isEmpty()) {
+                serviceProviders.produce(providers);
+            }
+            files.add(ServiceProviderBuildItem.SPI_ROOT + service);
+        }
+        lookups.produce(new ReachabilityLookupsBuildItem(List.of(), List.of(), files));
+    }
+
+    /**
+     * Registers the lookups of the {@link ReachabilityLookupsBuildItem}s, for native executables built with exact
+     * reachability metadata ({@code quarkus.desktop.awt.exact-reachability-metadata}) : a reachability metadata file of
+     * the native build (the format that has lookups expected to fail and module resources).
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void reachabilityMetadata(DesktopAwtConfig config, NativeConfig nativeConfig,
+            List<ReachabilityLookupsBuildItem> lookups,
+            BuildProducer<GeneratedResourceBuildItem> generatedResources) {
+        if (!exactReachabilityMetadata(config, nativeConfig)) {
+            return;
+        }
+        generatedResources.produce(new GeneratedResourceBuildItem(ReachabilityLookups.REACHABILITY_METADATA,
+                ReachabilityLookups.reachabilityMetadata(lookups).getBytes(StandardCharsets.UTF_8)));
+    }
+
+    /**
+     * Whether the native build uses exact reachability metadata : {@code quarkus.desktop.awt.exact-reachability-metadata},
+     * or the native image options of the Quarkus configuration.
+     */
+    static boolean exactReachabilityMetadata(DesktopAwtConfig config, NativeConfig nativeConfig) {
+        return config.exactReachabilityMetadata().orElseGet(() -> Stream
+                .concat(nativeConfig.additionalBuildArgs().orElse(List.of()).stream(),
+                        nativeConfig.additionalBuildArgsAppend().orElse(List.of()).stream())
+                .anyMatch(DesktopAwtProcessor::isExactReachabilityMetadataOption));
+    }
+
+    static boolean isExactReachabilityMetadataOption(String option) {
+        String trimmed = option.trim();
+        // --exact-reachability-metadata[=packages], --exact-reachability-metadata-path=..., and the former option
+        return trimmed.startsWith("--exact-reachability-metadata") || trimmed.startsWith("-H:ThrowMissingRegistrationErrors");
     }
 
     // ------------------------------------------------------------------------------------------------------------- JNI
@@ -605,7 +731,7 @@ class DesktopAwtProcessor {
         }
         // Before the application starts, so before any AWT class is used : the other steps that use AWT at startup
         // consume DesktopAwtRuntimeInitBuildItem
-        recorder.initRuntimeHome(fontConfiguration);
+        recorder.initRuntimeHome(fontConfiguration, platform.isMac());
         runtimeInit.produce(new DesktopAwtRuntimeInitBuildItem());
         return new ServiceStartBuildItem(FEATURE);
     }

@@ -42,6 +42,12 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * {@code quarkus.desktop.swing.java-beans.jdk-classes} is enabled : the bean properties, event sets and public fields
  * of the Swing components, models, borders, events and listeners, text components and documents, for the JavaBeans
  * API.</li>
+ * <li>{@code REFLECTIVE_TYPES} : classes whose members are queried with reflection, registered as types (the
+ * internal values of the Swing classes that the JavaBeans API meets), for {@code --exact-reachability-metadata}.</li>
+ * <li>{@code NEGATIVE_CLASS_LOOKUPS} : class names that Swing looks up and expects not to find (they do not exist in the
+ * JDK), for {@code --exact-reachability-metadata}.</li>
+ * <li>{@code METHOD_LOOKUPS} : methods that Swing looks up with {@code getDeclaredMethod} to find out whether a class
+ * declares them, {@code "fqcn#name(paramType,...)"}, for {@code --exact-reachability-metadata}.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_CLASSES} : classes reached from native code, with all their constructors, methods and
  * fields.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_METHODS} : single methods or constructors reached from native code,
@@ -58,7 +64,9 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * reflective and by-name lookups in the JDK 25 Swing sources, and the tracing agent run on Windows and on Linux (Xvfb,
  * GTK 3) with the checks of the Swing integration tests (every look and feel with a gallery of the components, their
  * defaults and key bindings, HTML and RTF text, formatters, table and tree editors, file and color choosers, option
- * panes, internal frames, property transfers, printing to a PostScript stream, popups, timers and workers).
+ * panes, internal frames, property transfers, printing to a PostScript stream, popups, timers and workers). The
+ * lookups for {@code --exact-reachability-metadata} come from native executables of the showcase built with it (Windows,
+ * JDK 25), and from the JDK 25 classes (the text components that may declare {@code processInputMethodEvent}).
  */
 public final class SwingClassesAndResources {
 
@@ -136,6 +144,10 @@ public final class SwingClassesAndResources {
             "javax.swing.plaf.multi.MultiLookAndFeel",
             "javax.swing.plaf.nimbus.NimbusLookAndFeel",
             "javax.swing.plaf.synth.SynthLookAndFeel",
+
+            // JavaBeans : XMLEncoder instantiates the values of the properties it encodes, to compare them with the
+            // default (the graphics utilities of the Synth look and feels)
+            "javax.swing.plaf.synth.SynthGraphicsUtils",
 
             // Nimbus : the components of the style prefixes, by name (NimbusDefaults.LazyStyle)
             "javax.swing.JButton",
@@ -835,6 +847,163 @@ public final class SwingClassesAndResources {
     static String[] LINUX_JAVA_BEANS_CLASSES = {
     };
 
+    // ------------------------------------------------------------------------------------- exact reachability metadata
+    // What a native executable built with --exact-reachability-metadata needs besides the registrations above (see the
+    // Desktop AWT extension, which also computes the lookups that depend on names).
+
+    static String[] REFLECTIVE_TYPES = {
+            // JavaBeans : the internal values of the Swing components that XMLEncoder meets (layouts, borders, renderers,
+            // transfer handlers, key maps of the basic and Metal look and feels), and the interfaces of the components
+            "javax.swing.JRootPane$1",
+            "javax.swing.TransferHandler$HasGetTransferHandler",
+            "javax.swing.plaf.basic.BasicComboBoxRenderer",
+            "javax.swing.plaf.basic.BasicComboBoxRenderer$UIResource",
+            "javax.swing.plaf.basic.BasicComboBoxUI$ComboBoxLayoutManager",
+            "javax.swing.plaf.basic.BasicComboBoxUI$DefaultKeySelectionManager",
+            "javax.swing.plaf.basic.BasicListUI$ListTransferHandler",
+            "javax.swing.plaf.basic.BasicTabbedPaneUI$TabbedPaneLayout",
+            "javax.swing.plaf.basic.BasicTextUI$BasicHighlighter",
+            "javax.swing.plaf.basic.BasicTextUI$TextTransferHandler",
+            "javax.swing.plaf.basic.BasicTextUI$UpdateHandler",
+            "javax.swing.plaf.basic.BasicTreeUI$NodeDimensionsHandler",
+            "javax.swing.plaf.basic.BasicTreeUI$TreeTransferHandler",
+            "javax.swing.plaf.basic.DefaultMenuLayout",
+            "javax.swing.plaf.basic.LazyActionMap",
+            "javax.swing.plaf.metal.MetalBorders$MenuBarBorder",
+            "javax.swing.plaf.metal.MetalBorders$MenuItemBorder",
+            "javax.swing.plaf.metal.MetalBorders$ScrollPaneBorder",
+            "javax.swing.plaf.metal.MetalComboBoxUI$MetalComboBoxLayoutManager",
+            "javax.swing.plaf.metal.MetalTabbedPaneUI$TabbedPaneLayout",
+            "javax.swing.plaf.synth.SynthGraphicsUtils",
+            "javax.swing.text.DefaultEditorKit$DefaultKeyTypedAction",
+            "javax.swing.text.JTextComponent$DefaultKeymap",
+            "javax.swing.text.JTextComponent$KeymapActionMap",
+            "sun.swing.ImageIconUIResource",
+            "sun.swing.PrintColorUIResource",
+    };
+
+    static String[] WINDOWS_REFLECTIVE_TYPES = {
+    };
+
+    static String[] LINUX_REFLECTIVE_TYPES = {
+    };
+
+    static String[] NEGATIVE_CLASS_LOOKUPS = {
+            // Nimbus : NimbusDefaults looks up the class of each region and part of its skin, javax.swing.J<name> then
+            // <name> (LazyStyle.Part), and uses the name when there is no such class
+            "ArrowButton",
+            "Button",
+            "CheckBox",
+            "CheckBoxMenuItem",
+            "ColorChooser",
+            "ComboBox",
+            "DesktopIcon",
+            "DesktopPane",
+            "EditorPane",
+            "FileChooser",
+            "FormattedTextField",
+            "InternalFrame",
+            "InternalFrameTitlePane",
+            "Label",
+            "List",
+            "Menu",
+            "MenuBar",
+            "MenuItem",
+            "MenuItemAccelerator",
+            "OptionPane",
+            "Panel",
+            "PasswordField",
+            "PopupMenu",
+            "PopupMenuSeparator",
+            "ProgressBar",
+            "RadioButton",
+            "RadioButtonMenuItem",
+            "RootPane",
+            "ScrollBar",
+            "ScrollBarThumb",
+            "ScrollBarTrack",
+            "ScrollPane",
+            "Separator",
+            "Slider",
+            "SliderThumb",
+            "SliderTrack",
+            "Spinner",
+            "SplitPane",
+            "SplitPaneDivider",
+            "TabbedPane",
+            "TabbedPaneContent",
+            "TabbedPaneTab",
+            "TabbedPaneTabArea",
+            "Table",
+            "TableHeader",
+            "TextArea",
+            "TextField",
+            "TextPane",
+            "ToggleButton",
+            "ToolBar",
+            "ToolBarSeparator",
+            "ToolTip",
+            "Tree",
+            "TreeCell",
+            "Viewport",
+            "javax.swing.JArrowButton",
+            "javax.swing.JDesktopIcon",
+            "javax.swing.JInternalFrameTitlePane",
+            "javax.swing.JMenuItemAccelerator",
+            "javax.swing.JPopupMenuSeparator",
+            "javax.swing.JScrollBarThumb",
+            "javax.swing.JScrollBarTrack",
+            "javax.swing.JSliderThumb",
+            "javax.swing.JSliderTrack",
+            "javax.swing.JSplitPaneDivider",
+            "javax.swing.JTabbedPaneContent",
+            "javax.swing.JTabbedPaneTab",
+            "javax.swing.JTabbedPaneTabArea",
+            "javax.swing.JTableHeader",
+            "javax.swing.JToolBarSeparator",
+            "javax.swing.JTreeCell",
+    };
+
+    static String[] WINDOWS_NEGATIVE_CLASS_LOOKUPS = {
+    };
+
+    static String[] LINUX_NEGATIVE_CLASS_LOOKUPS = {
+    };
+
+    static String[] METHOD_LOOKUPS = {
+            // text components : JTextComponent checks whether the class of a text component, or one of its superclasses
+            // below JTextComponent, declares processInputMethodEvent (then it sends no KEY_TYPED events for committed
+            // text). The text components of the JDK that do not declare it (JFormattedTextField does)
+            "com.sun.java.swing.plaf.motif.MotifFileChooserUI$3#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "com.sun.java.swing.plaf.motif.MotifFileChooserUI$5#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JEditorPane#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JPasswordField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JTextArea#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JTextPane#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.plaf.basic.BasicComboBoxEditor$BorderlessTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.plaf.basic.BasicOptionPaneUI$MultiplexingTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.plaf.metal.MetalComboBoxEditor$1#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.plaf.metal.MetalFileChooserUI$3#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.plaf.synth.SynthTreeUI$SynthTreeCellEditor$1#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.text.html.FrameView$FrameEditorPane#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.tree.DefaultTreeCellEditor$DefaultTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.swing.plaf.synth.SynthFileChooserUIImpl$3#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.swing.text.TextComponentPrintable$3#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.swing.text.TextComponentPrintable$4#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.swing.text.TextComponentPrintable$5#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.swing.text.TextComponentPrintable$6#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.swing.text.TextComponentPrintable$7#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+    };
+
+    static String[] WINDOWS_METHOD_LOOKUPS = {
+            // text components (see METHOD_LOOKUPS) of the Windows look and feel
+            "com.sun.java.swing.plaf.windows.WindowsFileChooserUI$7#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+    };
+
+    static String[] LINUX_METHOD_LOOKUPS = {
+    };
+
     // ------------------------------------------------------------------------------------------------------------- JNI
     // The native code of Swing (Windows themes, GTK engine, shell folders) creates the AWT and java.base objects that
     // the Desktop AWT extension registers.
@@ -948,6 +1117,15 @@ public final class SwingClassesAndResources {
     };
 
     static String[] MAC_JAVA_BEANS_CLASSES = {
+    };
+
+    static String[] MAC_REFLECTIVE_TYPES = {
+    };
+
+    static String[] MAC_NEGATIVE_CLASS_LOOKUPS = {
+    };
+
+    static String[] MAC_METHOD_LOOKUPS = {
     };
 
     static String[] MAC_JNI_RUNTIME_ACCESS_CLASSES = {

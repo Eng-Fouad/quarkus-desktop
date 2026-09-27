@@ -82,6 +82,7 @@ Swing components can be CDI beans: make them `@Singleton` or `@Dependent` beans 
 xref:awt.adoc#_cdi_beans[CDI beans]), and create them on the event dispatch thread.
 
 [[look-and-feel]]
+[[look-and-feel]]
 == Look and feel
 
 Set the look and feel in `application.properties`:
@@ -271,14 +272,30 @@ documents, HTML `<object>` elements with `swing.html.object=true`) need their ow
 with `@RegisterForReflection`.
 * The native image tracing agent gives the metadata that an application needs:
 `java -agentlib:native-image-agent=config-output-dir=src/main/resources/META-INF/native-image/<group>/<artifact> -jar target/quarkus-app/quarkus-run.jar`.
+* The native executables of Swing applications have the limitations of AWT applications (see
+xref:awt.adoc#limitations[Limitations]).
+
+== Exact reachability metadata
+
+With `--exact-reachability-metadata` (see xref:awt.adoc#exact-reachability-metadata[Exact reachability metadata]), the
+Swing extension registers the lookups of Swing expected to fail: the class names that Nimbus probes for the regions of its
+skin, `processInputMethodEvent` in the text components of the JDK and of the application that do not declare it, the
+`.properties` files next to the resource bundles of the look and feels, the icons of the look and feels that are looked up
+in the package of an application look and feel first, and the internal values of the Swing components that the
+JavaBeans API queries when it writes them (with their `BeanInfo`, `Customizer` and `PersistenceDelegate` probes).
 
 == Verification
 
 The integration tests of the extension run a gallery of the components with every look and feel of the platform (in JVM
 mode and as a native executable, on Windows and on Linux), and check that the native executable gets the same look and
 feel defaults (UI delegates, icons, painters, borders, colors, fonts, texts), the same key bindings, the same font
-metrics, the same rendering (pixel by pixel) and the same PostScript output as JVM mode.
+metrics, the same rendering (pixel by pixel) and the same PostScript output as JVM mode. The
+https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] compares JVM mode and native executables
+page by page, with its Swing components, containers, text, look and feel, data transfer, printing and JavaBeans pages
+(see xref:index.adoc#verification[Verification]).
 
 == Configuration
+
+See xref:index.adoc#configuration[the overview of the properties].
 
 include::includes/quarkus-desktop-swing.adoc[leveloffset=+1, opts=optional]

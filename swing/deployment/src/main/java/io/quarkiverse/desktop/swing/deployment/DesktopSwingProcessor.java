@@ -15,6 +15,8 @@ import io.quarkiverse.desktop.awt.deployment.AwtJavaBeansClassesBuildItem;
 import io.quarkiverse.desktop.awt.deployment.DesktopAwtRuntimeInitBuildItem;
 import io.quarkiverse.desktop.awt.deployment.DesktopTargetPlatformBuildItem;
 import io.quarkiverse.desktop.awt.deployment.MemberEntry;
+import io.quarkiverse.desktop.awt.deployment.ReachabilityLookups;
+import io.quarkiverse.desktop.awt.deployment.ReachabilityLookupsBuildItem;
 import io.quarkiverse.desktop.awt.deployment.ReflectivePublicMembersBuildItem;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingBuildTimeConfig;
 import io.quarkiverse.desktop.swing.runtime.DesktopSwingBuildTimeConfig.IncludedLookAndFeel;
@@ -153,7 +155,8 @@ class DesktopSwingProcessor {
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void applicationClasses(CombinedIndexBuildItem combinedIndex,
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
-            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods) {
+            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
+            BuildProducer<ReachabilityLookupsBuildItem> lookups) {
         SwingApplicationClasses classes = SwingApplicationClasses.scan(combinedIndex.getIndex(),
                 Thread.currentThread().getContextClassLoader());
         LOGGER.debugf("Application classes used by Swing with reflection : %s", classes.summary());
@@ -171,6 +174,46 @@ class DesktopSwingProcessor {
         for (Map.Entry<String, MethodInfo> handler : classes.inputMethodHandlers.entrySet()) {
             reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, true, handler.getValue()));
         }
+        lookups.produce(new ReachabilityLookupsBuildItem(List.of(), classes.inputMethodLookups,
+                classes.lookAndFeelIconGlobs));
+    }
+
+    /**
+     * The lookups of the Swing lists for {@code --exact-reachability-metadata} ({@code REFLECTIVE_TYPES},
+     * {@code NEGATIVE_CLASS_LOOKUPS}, {@code METHOD_LOOKUPS}), the {@code .properties} files next to the resource
+     * bundles and the module resources of the resource globs of the lists (see the Desktop AWT extension, which writes
+     * them to the native build).
+     */
+    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
+    void reachabilityLookups(DesktopTargetPlatformBuildItem platform, DesktopSwingBuildTimeConfig config,
+            BuildProducer<ReachabilityLookupsBuildItem> lookups) {
+        List<String> reflectiveTypes = List.of(entries(platform, config, SwingClassesAndResources.REFLECTIVE_TYPES,
+                SwingClassesAndResources.WINDOWS_REFLECTIVE_TYPES,
+                SwingClassesAndResources.LINUX_REFLECTIVE_TYPES,
+                SwingClassesAndResources.MAC_REFLECTIVE_TYPES));
+        // the JavaBeans API probes these values as it probes the classes registered for it (see the Desktop AWT
+        // extension)
+        Set<String> types = new TreeSet<>(ReachabilityLookups.javaBeansTypes(reflectiveTypes));
+        // Nimbus probes : the names of classes that do not exist, not filtered by look and feel (harmless)
+        types.addAll(List.of(platform.withPlatform(SwingClassesAndResources.NEGATIVE_CLASS_LOOKUPS,
+                SwingClassesAndResources.WINDOWS_NEGATIVE_CLASS_LOOKUPS,
+                SwingClassesAndResources.LINUX_NEGATIVE_CLASS_LOOKUPS,
+                SwingClassesAndResources.MAC_NEGATIVE_CLASS_LOOKUPS)));
+        Set<String> globs = new TreeSet<>(ReachabilityLookups.bundlePropertiesGlobs(List.of(entries(platform, config,
+                SwingClassesAndResources.RESOURCE_BUNDLES,
+                SwingClassesAndResources.WINDOWS_RESOURCE_BUNDLES,
+                SwingClassesAndResources.LINUX_RESOURCE_BUNDLES,
+                SwingClassesAndResources.MAC_RESOURCE_BUNDLES))));
+        globs.addAll(ReachabilityLookups.moduleGlobs(List.of(entries(platform, config,
+                SwingClassesAndResources.RESOURCE_GLOBS,
+                SwingClassesAndResources.WINDOWS_RESOURCE_GLOBS,
+                SwingClassesAndResources.LINUX_RESOURCE_GLOBS,
+                SwingClassesAndResources.MAC_RESOURCE_GLOBS))));
+        lookups.produce(new ReachabilityLookupsBuildItem(types, List.of(entries(platform, config,
+                SwingClassesAndResources.METHOD_LOOKUPS,
+                SwingClassesAndResources.WINDOWS_METHOD_LOOKUPS,
+                SwingClassesAndResources.LINUX_METHOD_LOOKUPS,
+                SwingClassesAndResources.MAC_METHOD_LOOKUPS)), globs));
     }
 
     /**

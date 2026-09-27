@@ -40,6 +40,16 @@ import java.util.List;
  * <li>{@code JAVA_BEANS_CLASSES} : JDK classes registered as {@code REFLECTIVE_PUBLIC_MEMBERS} when
  * {@code quarkus.desktop.awt.java-beans.jdk-classes} is enabled : the bean properties, event sets and public fields of
  * the AWT components, layouts, geometry and event classes, for the JavaBeans API.</li>
+ * <li>{@code REFLECTIVE_TYPES} : classes whose members are queried with reflection ({@code Class.getMethods()}...),
+ * registered as types : the values that the JavaBeans API meets, the var handles of the native memory accesses of
+ * Java2D and fonts. Needed by native executables built with {@code --exact-reachability-metadata}, harmless
+ * otherwise.</li>
+ * <li>{@code NEGATIVE_CLASS_LOOKUPS} : class names that the JDK looks up and expects not to find (they do not exist in
+ * the JDK) : registered so that the lookup fails with {@code ClassNotFoundException} in native executables built with
+ * {@code --exact-reachability-metadata} too.</li>
+ * <li>{@code METHOD_LOOKUPS} : methods that the JDK looks up with {@code getDeclaredMethod} to find out whether a class
+ * declares them, {@code "fqcn#name(paramType,...)"} : registered as lookups (the class may not declare the method), for
+ * {@code --exact-reachability-metadata}.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_CLASSES} : classes reached from native code, with all their constructors, methods and
  * fields.</li>
  * <li>{@code JNI_RUNTIME_ACCESS_METHODS} : single methods or constructors reached from native code,
@@ -59,6 +69,9 @@ import java.util.List;
  * agent run on Windows and Linux (Xvfb) with an AWT application exercising
  * windows, peers, menus, dialogs, file dialogs, Java2D (buffered images, volatile images, buffer strategies, XOR mode),
  * fonts, images, cursors, Robot, clipboard, printing to a PostScript stream, Desktop, Taskbar, SystemTray and sound.
+ * The lookups expected to fail and the queried types come from native executables of the showcase built with
+ * {@code --exact-reachability-metadata} (Windows, JDK 25) : the lookups that depend on names (the JavaBeans probes of
+ * {@code <class>BeanInfo}...) are computed by the processor from the classes it registers for the JavaBeans API.
  * The exceptions thrown by the Windows and Linux native code of {@code java.desktop} ({@code JNU_Throw*},
  * {@code FindClass} and {@code ThrowNew}, exceptions created with a constructor) were audited against what GraalVM
  * registers, as were the members that the native code looks up on a class and that the class inherits. The JavaBeans
@@ -103,9 +116,42 @@ public final class AwtClassesAndResources {
      * formats ({@code IIOMetadataFormatImpl.getElementDescription} catches the {@code MissingResourceException} and
      * returns {@code null}). GraalVM 25.3 and later throw a {@code MissingResourceRegistrationError} instead when the
      * bundle is not registered : registered, the lookup fails with a {@code MissingResourceException} as in the JVM.
+     * For {@code --exact-reachability-metadata}, the extension also registers the lookups of their classes (for the
+     * locales of the application), provider and {@code .properties} files.
      */
     static final List<String> ABSENT_RESOURCE_BUNDLES = List.of("com.sun.imageio.plugins.wbmp.WBMPMetadataFormatResources",
             "javax.imageio.plugins.tiff.TIFFImageMetadataFormatResources");
+
+    /**
+     * The service interfaces of the JDK desktop modules whose providers the JDK also looks up on the class path
+     * ({@code META-INF/services}) : the providers of the application and of its libraries are registered, and the
+     * lookup of the service files for {@code --exact-reachability-metadata}.
+     */
+    static final List<String> CLASS_PATH_SERVICES = List.of(
+            // input methods
+            "java.awt.im.spi.InputMethodDescriptor",
+            // accessibility
+            "javax.accessibility.AccessibilityProvider",
+            // ImageIO plugins (IIORegistry)
+            "javax.imageio.spi.ImageInputStreamSpi",
+            "javax.imageio.spi.ImageOutputStreamSpi",
+            "javax.imageio.spi.ImageReaderSpi",
+            "javax.imageio.spi.ImageTranscoderSpi",
+            "javax.imageio.spi.ImageWriterSpi",
+            // printing
+            "javax.print.PrintServiceLookup",
+            "javax.print.StreamPrintServiceFactory",
+            // Java Sound
+            "javax.sound.midi.spi.MidiDeviceProvider",
+            "javax.sound.midi.spi.MidiFileReader",
+            "javax.sound.midi.spi.MidiFileWriter",
+            "javax.sound.midi.spi.SoundbankReader",
+            "javax.sound.sampled.spi.AudioFileReader",
+            "javax.sound.sampled.spi.AudioFileWriter",
+            "javax.sound.sampled.spi.FormatConversionProvider",
+            "javax.sound.sampled.spi.MixerProvider",
+            // the XML parser of XMLDecoder and of the Synth XML files (module java.xml)
+            "javax.xml.parsers.SAXParserFactory");
 
     private AwtClassesAndResources() {
         // Constants
@@ -840,6 +886,105 @@ public final class AwtClassesAndResources {
     static String[] LINUX_JAVA_BEANS_CLASSES = {
     };
 
+    // ------------------------------------------------------------------------------------- exact reachability metadata
+    // What a native executable built with --exact-reachability-metadata needs besides the registrations above : the
+    // types whose members are queried, the lookups that the JDK expects to fail, the methods whose declaration it checks.
+    // The processor adds the lookups computed from names : the JavaBeans probes of the classes registered for the
+    // JavaBeans API (<class>BeanInfo, <class>Customizer, <class>PersistenceDelegate, <class>Editor...) with the
+    // supertypes of these classes, the coalesceEvents lookups of the application components, the resource bundles and
+    // resources of the JDK modules.
+
+    static String[] REFLECTIVE_TYPES = {
+            // Java2D render buffers and the glyph cache of fonts access native memory with the Foreign Function and Memory
+            // API : the var handles of the memory segments (VarHandle.getMethodHandle looks up their get and set methods)
+            "java.lang.invoke.VarHandleSegmentAsBytes",
+            "java.lang.invoke.VarHandleSegmentAsCharsAligned",
+            "java.lang.invoke.VarHandleSegmentAsDoublesAligned",
+            "java.lang.invoke.VarHandleSegmentAsFloatsAligned",
+            "java.lang.invoke.VarHandleSegmentAsIntsAligned",
+            "java.lang.invoke.VarHandleSegmentAsLongsAligned",
+            "java.lang.invoke.VarHandleSegmentAsShortsAligned",
+
+            // JavaBeans : the values that XMLEncoder and XMLDecoder meet (java.lang values, classes, reflection objects,
+            // the collections of the java.util.Collections factory methods) and the interfaces of the registered classes :
+            // the Introspector and the method and constructor finders query their public members
+            "java.awt.SystemColor",
+            "java.awt.image.ImageObserver",
+            "java.beans.PropertyVetoException",
+            "java.io.Serializable",
+            "java.lang.Boolean",
+            "java.lang.Byte",
+            "java.lang.Character",
+            "java.lang.Class",
+            "java.lang.Double",
+            "java.lang.Enum",
+            "java.lang.Float",
+            "java.lang.Integer",
+            "java.lang.Iterable",
+            "java.lang.Long",
+            "java.lang.Short",
+            "java.lang.String",
+            "java.lang.constant.Constable",
+            "java.lang.invoke.TypeDescriptor",
+            "java.lang.invoke.TypeDescriptor$OfField",
+            "java.lang.reflect.AccessibleObject",
+            "java.lang.reflect.AnnotatedElement",
+            "java.lang.reflect.Array",
+            "java.lang.reflect.Field",
+            "java.lang.reflect.GenericDeclaration",
+            "java.lang.reflect.Member",
+            "java.lang.reflect.Method",
+            "java.lang.reflect.Type",
+            "java.util.Collections",
+            "java.util.Collections$EmptyList",
+            "java.util.Collections$EmptyMap",
+            "java.util.Collections$EmptySet",
+            "java.util.Collections$SingletonList",
+            "java.util.Collections$SingletonMap",
+            "java.util.Collections$SingletonSet",
+            "java.util.Collections$SynchronizedCollection",
+            "java.util.Collections$SynchronizedList",
+            "java.util.Collections$SynchronizedMap",
+            "java.util.Collections$SynchronizedRandomAccessList",
+            "java.util.Collections$SynchronizedSet",
+            "java.util.Collections$UnmodifiableCollection",
+            "java.util.Collections$UnmodifiableList",
+            "java.util.Collections$UnmodifiableMap",
+            "java.util.Collections$UnmodifiableRandomAccessList",
+            "java.util.Collections$UnmodifiableSet",
+            "java.util.Comparator",
+            "java.util.RandomAccess",
+            "java.util.SequencedCollection",
+            "java.util.SequencedMap",
+            "javax.accessibility.Accessible",
+    };
+
+    static String[] WINDOWS_REFLECTIVE_TYPES = {
+    };
+
+    static String[] LINUX_REFLECTIVE_TYPES = {
+    };
+
+    static String[] NEGATIVE_CLASS_LOOKUPS = {
+    };
+
+    static String[] WINDOWS_NEGATIVE_CLASS_LOOKUPS = {
+            // printing : the IPP print services of CUPS (Linux) are looked up by name
+            "sun.print.IPPPrintService",
+    };
+
+    static String[] LINUX_NEGATIVE_CLASS_LOOKUPS = {
+    };
+
+    static String[] METHOD_LOOKUPS = {
+    };
+
+    static String[] WINDOWS_METHOD_LOOKUPS = {
+    };
+
+    static String[] LINUX_METHOD_LOOKUPS = {
+    };
+
     // ------------------------------------------------------------------------------------------------------------- JNI
 
     static String[] JNI_RUNTIME_ACCESS_CLASSES = {
@@ -1038,7 +1183,8 @@ public final class AwtClassesAndResources {
             // fonts (a Runnable run by the Direct3D render queue)
             "sun.font.StrikeCache$1",
 
-            // Java2D Direct3D pipeline (the render queue runs Runnables from native code)
+            // Java2D Direct3D pipeline : the natives, and the Runnables that D3DRenderQueue.flushAndInvokeNow runs from
+            // native code (D3DRenderQueue.cpp calls their run method)
             "sun.java2d.d3d.D3DGraphicsDevice",
             "sun.java2d.d3d.D3DGraphicsDevice$1",
             "sun.java2d.d3d.D3DGraphicsDevice$2",
@@ -1052,10 +1198,8 @@ public final class AwtClassesAndResources {
             "sun.java2d.d3d.D3DRenderQueue",
             "sun.java2d.d3d.D3DRenderQueue$1",
             "sun.java2d.d3d.D3DRenderer",
-            "sun.java2d.d3d.D3DRenderer$Tracer$1",
             "sun.java2d.d3d.D3DSurfaceData",
             "sun.java2d.d3d.D3DSurfaceData$1",
-            "sun.java2d.d3d.D3DSurfaceData$2",
             "sun.java2d.d3d.D3DSurfaceData$D3DDataBufferNative$1",
             "sun.java2d.d3d.D3DSurfaceData$D3DDataBufferNative$2",
             "sun.java2d.d3d.D3DTextRenderer",
@@ -1064,7 +1208,7 @@ public final class AwtClassesAndResources {
             "sun.java2d.opengl.WGLGraphicsConfig",
             "sun.java2d.opengl.WGLSurfaceData",
 
-            // Java2D pipes (Runnables run by the Direct3D render queue)
+            // Java2D pipes (Runnables that the Direct3D render queue runs from native code)
             "sun.java2d.pipe.BufferedMaskFill$1",
             "sun.java2d.pipe.BufferedRenderPipe$1",
             "sun.java2d.pipe.BufferedTextPipe$1",
@@ -1465,6 +1609,15 @@ public final class AwtClassesAndResources {
     };
 
     static String[] MAC_JAVA_BEANS_CLASSES = {
+    };
+
+    static String[] MAC_REFLECTIVE_TYPES = {
+    };
+
+    static String[] MAC_NEGATIVE_CLASS_LOOKUPS = {
+    };
+
+    static String[] MAC_METHOD_LOOKUPS = {
     };
 
     // JNI : the lookups of the macOS native code (libawt_lwawt, libosxapp), from DECLARE_CLASS / DECLARE_METHOD /
