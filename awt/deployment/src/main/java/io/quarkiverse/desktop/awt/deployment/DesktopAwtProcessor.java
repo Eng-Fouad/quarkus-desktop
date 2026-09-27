@@ -512,6 +512,9 @@ class DesktopAwtProcessor {
             // checks the module lookups of bundles (UIDefaults) against the bundle name only
             bundles.produce(new NativeImageResourceBundleBuildItem(bundle));
         }
+        for (String bundle : AwtClassesAndResources.ABSENT_RESOURCE_BUNDLES) {
+            bundles.produce(new NativeImageResourceBundleBuildItem(bundle));
+        }
         resources.produce(NativeImageResourcePatternsBuildItem.builder()
                 .includeGlobs(platform.withPlatform(AwtClassesAndResources.RESOURCE_GLOBS,
                         AwtClassesAndResources.WINDOWS_RESOURCE_GLOBS,

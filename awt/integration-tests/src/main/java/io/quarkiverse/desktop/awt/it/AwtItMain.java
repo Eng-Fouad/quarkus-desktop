@@ -295,7 +295,10 @@ public class AwtItMain implements QuarkusApplication {
             IIOMetadataFormat metadataFormat = reader.getOriginatingProvider().getImageMetadataFormat(
                     reader.getOriginatingProvider().getNativeImageMetadataFormatName());
             require(metadataFormat != null, "no " + format + " metadata format");
-            result.append(format).append('=').append(metadataFormat.getRootName()).append(' ');
+            // null for the WBMP and TIFF formats, whose resource bundles do not exist (looked up anyway)
+            String rootDescription = metadataFormat.getElementDescription(metadataFormat.getRootName(), Locale.ENGLISH);
+            result.append(format).append('=').append(metadataFormat.getRootName())
+                    .append(rootDescription == null ? "" : "(described)").append(' ');
         }
         String description = IIOMetadataFormatImpl.getStandardFormatInstance().getElementDescription("Chroma",
                 Locale.ENGLISH);
@@ -331,7 +334,9 @@ public class AwtItMain implements QuarkusApplication {
         java.util.List<Object> values = new ArrayList<>(java.util.List.of(new Color(30, 136, 229, 200),
                 new Font(Font.SERIF, Font.BOLD, 13), new Insets(1, 2, 3, 4), new Point(-5, 7),
                 new Rectangle(10, 20, 300, 400), new Dimension(640, 480), new Date(0), new TreeMap<>(Map.of("a", 1)),
-                Locale.Category.FORMAT, "text"));
+                Locale.Category.FORMAT, "text",
+                // primitive classes (the component types of primitive arrays) : the TYPE fields of the wrappers
+                int.class, boolean.class));
         ByteArrayOutputStream xml = new ByteArrayOutputStream();
         java.util.List<Exception> exceptions = new ArrayList<>();
         try (XMLEncoder encoder = new XMLEncoder(xml)) {

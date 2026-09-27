@@ -98,6 +98,15 @@ public final class AwtClassesAndResources {
     static final List<String> TEXT_ATTRIBUTE_SERIALIZABLE_CLASSES = List.of("java.awt.font.TextAttribute",
             "java.text.AttributedCharacterIterator$Attribute");
 
+    /**
+     * Resource bundles that the JDK looks up but does not have : the descriptions of the WBMP and TIFF image metadata
+     * formats ({@code IIOMetadataFormatImpl.getElementDescription} catches the {@code MissingResourceException} and
+     * returns {@code null}). GraalVM 25.3 and later throw a {@code MissingResourceRegistrationError} instead when the
+     * bundle is not registered : registered, the lookup fails with a {@code MissingResourceException} as in the JVM.
+     */
+    static final List<String> ABSENT_RESOURCE_BUNDLES = List.of("com.sun.imageio.plugins.wbmp.WBMPMetadataFormatResources",
+            "javax.imageio.plugins.tiff.TIFFImageMetadataFormatResources");
+
     private AwtClassesAndResources() {
         // Constants
     }
@@ -603,6 +612,20 @@ public final class AwtClassesAndResources {
             "java.awt.CardLayout$Card#name",
             "java.awt.GridBagLayout#comptable",
             "javax.swing.BoxLayout#axis",
+
+            // JavaBeans : XMLEncoder writes a primitive class (the component type of a primitive array, a parameter type)
+            // as the TYPE field of its wrapper, read with Field.get (MetaData.java_lang_Class_PersistenceDelegate).
+            // GraalVM 25.3 and later throw a MissingReflectionRegistrationError on the read of a field that is not
+            // registered
+            "java.lang.Boolean#TYPE",
+            "java.lang.Byte#TYPE",
+            "java.lang.Character#TYPE",
+            "java.lang.Double#TYPE",
+            "java.lang.Float#TYPE",
+            "java.lang.Integer#TYPE",
+            "java.lang.Long#TYPE",
+            "java.lang.Short#TYPE",
+            "java.lang.Void#TYPE",
     };
 
     static String[] WINDOWS_REFLECTIVE_FIELDS = {
