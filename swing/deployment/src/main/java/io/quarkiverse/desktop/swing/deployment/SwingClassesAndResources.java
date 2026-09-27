@@ -372,10 +372,9 @@ public final class SwingClassesAndResources {
 
             // Synth look and feels (Synth, Nimbus, GTK) : SynthLookAndFeel creates their UI delegates
             "javax.swing.plaf.synth.SynthLookAndFeel#createUI(javax.swing.JComponent)",
-    };
 
-    static String[] WINDOWS_REFLECTIVE_METHODS = {
-            // Motif look and feel : UI delegates (on Linux, the Desktop AWT extension registers them)
+            // Motif look and feel : UI delegates (installed on every platform ; on Linux, the Desktop AWT extension
+            // registers them too, for the X11 text components)
             "com.sun.java.swing.plaf.motif.MotifButtonUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifCheckBoxMenuItemUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifCheckBoxUI#createUI(javax.swing.JComponent)",
@@ -407,7 +406,9 @@ public final class SwingClassesAndResources {
             "com.sun.java.swing.plaf.motif.MotifTextPaneUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifToggleButtonUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.motif.MotifTreeUI#createUI(javax.swing.JComponent)",
+    };
 
+    static String[] WINDOWS_REFLECTIVE_METHODS = {
             // Windows look and feel : UI delegates
             "com.sun.java.swing.plaf.windows.WindowsButtonUI#createUI(javax.swing.JComponent)",
             "com.sun.java.swing.plaf.windows.WindowsCheckBoxMenuItemUI#createUI(javax.swing.JComponent)",
@@ -1051,12 +1052,12 @@ public final class SwingClassesAndResources {
     static String[] RESOURCE_BUNDLES = {
             // Synth look and feels (Synth, Nimbus, GTK)
             "com.sun.swing.internal.plaf.synth.resources.synth",
+
+            // Motif look and feel (installed on every platform ; on Linux, the Desktop AWT extension registers it too)
+            "com.sun.java.swing.plaf.motif.resources.motif",
     };
 
     static String[] WINDOWS_RESOURCE_BUNDLES = {
-            // Motif look and feel (on Linux, the Desktop AWT extension registers it)
-            "com.sun.java.swing.plaf.motif.resources.motif",
-
             // Windows look and feel
             "com.sun.java.swing.plaf.windows.resources.windows",
     };
@@ -1075,12 +1076,12 @@ public final class SwingClassesAndResources {
             // text : the charsets of the RTF reader, and the content types of the pages (JEditorPane.setPage)
             "javax/swing/text/rtf/charsets/*",
             "sun/net/www/content-types.properties",
+
+            // Motif look and feel (installed on every platform ; on Linux, the Desktop AWT extension registers them too)
+            "com/sun/java/swing/plaf/motif/icons/*",
     };
 
     static String[] WINDOWS_RESOURCE_GLOBS = {
-            // Motif look and feel (on Linux, the Desktop AWT extension registers them)
-            "com/sun/java/swing/plaf/motif/icons/*",
-
             // Windows look and feel (fallbacks of the shell icons)
             "com/sun/java/swing/plaf/windows/icons/*",
     };
