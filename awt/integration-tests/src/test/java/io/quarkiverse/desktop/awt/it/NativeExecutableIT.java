@@ -110,8 +110,12 @@ public class NativeExecutableIT {
     @Test
     @EnabledOnOs(OS.MAC)
     void macExecutableHasTheBuildVersionOfTheJavaLauncher() throws IOException, InterruptedException {
-        Path launcher = Path.of(System.getProperty("java.home"), "bin", "java");
-        assertEquals(buildVersion(launcher), buildVersion(executable));
+        // the JDK of the native build : GRAALVM_HOME first, as the extension (DesktopAwtProcessor.builderJdkHome)
+        String graalvmHome = System.getenv("GRAALVM_HOME");
+        Path jdkHome = graalvmHome != null && !graalvmHome.isBlank() && Files.isDirectory(Path.of(graalvmHome))
+                ? Path.of(graalvmHome)
+                : Path.of(System.getProperty("java.home"));
+        assertEquals(buildVersion(jdkHome.resolve("bin").resolve("java")), buildVersion(executable));
     }
 
     /**
