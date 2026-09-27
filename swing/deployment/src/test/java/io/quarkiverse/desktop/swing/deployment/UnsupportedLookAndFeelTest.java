@@ -11,9 +11,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkus.test.QuarkusExtensionTest;
+import io.smallrye.common.os.OS;
 
 /**
- * A look and feel that cannot be set is reported as a warning, and the default one is kept.
+ * A look and feel that cannot be set is reported as a warning, and the default one is kept (the default look and feel of
+ * the JDK : Aqua on macOS, Metal elsewhere).
  */
 class UnsupportedLookAndFeelTest {
 
@@ -31,6 +33,7 @@ class UnsupportedLookAndFeelTest {
 
     @Test
     void defaultLookAndFeelIsKept() {
-        assertEquals("javax.swing.plaf.metal.MetalLookAndFeel", UIManager.getLookAndFeel().getClass().getName());
+        assertEquals(OS.MAC.isCurrent() ? "com.apple.laf.AquaLookAndFeel" : "javax.swing.plaf.metal.MetalLookAndFeel",
+                UIManager.getLookAndFeel().getClass().getName());
     }
 }

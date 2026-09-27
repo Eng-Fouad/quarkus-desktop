@@ -64,6 +64,34 @@ class AwtClassesAndResourcesTest {
             Map.entry("RESOURCE_GLOBS", GLOB_ENTRY),
             Map.entry("SERVICE_PROVIDERS", NAME_ENTRY));
 
+    /**
+     * The entries that the JDK has only since a version later than 17, the oldest JDK of the JVM mode : the lists are
+     * written for JDK 25, the JDK of the GraalVM versions that build native executables, and the tests also run with
+     * older JDKs. An entry is checked when the JDK running the tests has it.
+     */
+    static final Map<String, Integer> SINCE_JDK = Map.ofEntries(
+            // the var handles of the native memory accesses (Foreign Function and Memory API), the sequenced collections
+            Map.entry("java.lang.invoke.VarHandleSegmentAsBytes", 21),
+            Map.entry("java.lang.invoke.VarHandleSegmentAsCharsAligned", 25),
+            Map.entry("java.lang.invoke.VarHandleSegmentAsDoublesAligned", 25),
+            Map.entry("java.lang.invoke.VarHandleSegmentAsFloatsAligned", 25),
+            Map.entry("java.lang.invoke.VarHandleSegmentAsIntsAligned", 25),
+            Map.entry("java.lang.invoke.VarHandleSegmentAsLongsAligned", 25),
+            Map.entry("java.lang.invoke.VarHandleSegmentAsShortsAligned", 25),
+            Map.entry("java.util.SequencedCollection", 21),
+            Map.entry("java.util.SequencedMap", 21),
+            // macOS accessibility
+            Map.entry("sun.lwawt.macosx.CAccessibility#getAccessibleActionCount("
+                    + "javax.accessibility.AccessibleAction,java.awt.Component)", 21),
+            Map.entry("sun.lwawt.macosx.CAccessibility#getAccessibleComboboxValue("
+                    + "javax.accessibility.Accessible,java.awt.Component)", 21),
+            Map.entry("sun.lwawt.macosx.CAccessibility#getAccessibleCurrentAccessible("
+                    + "javax.accessibility.Accessible,java.awt.Component)", 21),
+            // macOS printing : the output bin, the exception that ends the print loop
+            Map.entry("sun.lwawt.macosx.CPrinterJob#getOutputBin()", 23),
+            Map.entry("sun.lwawt.macosx.CPrinterJob#setOutputBin(java.lang.String)", 23),
+            Map.entry("sun.lwawt.macosx.CPrinterJob#completePrintLoop(java.lang.Throwable)", 24));
+
     private static final Map<String, Class<?>> PRIMITIVES = Map.of("boolean", boolean.class, "byte", byte.class,
             "char", char.class, "short", short.class, "int", int.class, "long", long.class, "float", float.class,
             "double", double.class);
@@ -147,7 +175,9 @@ class AwtClassesAndResourcesTest {
     void jdkClassFiles() throws Exception {
         String platform = Platforms.current();
         try (JdkClassFiles jdk = JdkClassFiles.open(Path.of(System.getProperty("java.home")))) {
-            assertEquals(List.of(), jdk.missingEntries(AwtClassesAndResources.class, platform));
+            List<String> missing = new ArrayList<>(jdk.missingEntries(AwtClassesAndResources.class, platform));
+            missing.removeIf(m -> !inRunningJdk(m.substring(m.indexOf(" : ") + 3)));
+            assertEquals(List.of(), missing);
             assertTrue(jdk.hasMethod(MemberEntry.method("java.awt.Toolkit#getDefaultToolkit()")));
             assertTrue(jdk.hasMethod(MemberEntry.method("java.awt.Component#<init>()")));
             assertTrue(jdk.hasMethod(MemberEntry.method("java.awt.image.BufferedImage#getRGB(int,int,int,int,int[],int,int)")));
@@ -269,7 +299,15 @@ class AwtClassesAndResourcesTest {
                 // no list for this platform
             }
         }
+        entries.removeIf(entry -> !inRunningJdk(entry));
         return entries;
+    }
+
+    /**
+     * Whether the JDK running the tests has the entry (see {@link #SINCE_JDK}).
+     */
+    static boolean inRunningJdk(String entry) {
+        return SINCE_JDK.getOrDefault(entry, 17) <= Runtime.version().feature();
     }
 
     /**
