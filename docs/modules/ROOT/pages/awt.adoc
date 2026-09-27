@@ -342,7 +342,7 @@ files that Quarkus looks up at run time:
 ----
 
 The showcase (see xref:index.adoc#verification[Verification]) runs all its pages with exact metadata and no missing
-registration on Windows, in both of its variants, with its own application registrations in its
+registration on Windows, Linux and macOS, in both of its variants, with its own application registrations in its
 `reachability-metadata.json`. GraalVM 25.0.0 note: with `-XX:MissingRegistrationReportingMode=Warn`, opening the URL of
 a resource that is not registered (for instance an image of an HTML page that does not exist) fails with a
 `ClassCastException` after the warning, instead of a `FileNotFoundException`: register such resources.
