@@ -1003,6 +1003,8 @@ public final class SwingClassesAndResources {
     };
 
     static String[] LINUX_METHOD_LOOKUPS = {
+            // text components (see METHOD_LOOKUPS) of the GTK look and feel
+            "com.sun.java.swing.plaf.gtk.GTKFileChooserUI$3#processInputMethodEvent(java.awt.event.InputMethodEvent)",
     };
 
     // ------------------------------------------------------------------------------------------------------------- JNI
@@ -1090,6 +1092,9 @@ public final class SwingClassesAndResources {
             // GTK look and feel : icons, and the theme of the window decorations drawn by the look and feel (Metacity)
             "com/sun/java/swing/plaf/gtk/icons/*",
             "com/sun/java/swing/plaf/gtk/resources/metacity/**",
+            // the icons of the Synth defaults, that GTKStyle.get resolves through UIManager (option pane, file chooser,
+            // the Java cup of the internal frames)
+            "javax/swing/plaf/synth/icons/*",
     };
 
     // ----------------------------------------------------------------------------------------------------------- macOS

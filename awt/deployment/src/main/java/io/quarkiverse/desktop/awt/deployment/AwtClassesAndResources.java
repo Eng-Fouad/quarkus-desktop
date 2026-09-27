@@ -152,7 +152,9 @@ public final class AwtClassesAndResources {
             "javax.sound.sampled.spi.AudioFileWriter",
             "javax.sound.sampled.spi.FormatConversionProvider",
             "javax.sound.sampled.spi.MixerProvider",
-            // the XML parser of XMLDecoder and of the Synth XML files (module java.xml)
+            // the XML parsers (module java.xml) of XMLDecoder and of the Synth XML files (SAX), and of the Metacity themes
+            // of the GTK look and feel (DOM)
+            "javax.xml.parsers.DocumentBuilderFactory",
             "javax.xml.parsers.SAXParserFactory");
 
     private AwtClassesAndResources() {
@@ -985,6 +987,10 @@ public final class AwtClassesAndResources {
     };
 
     static String[] LINUX_METHOD_LOOKUPS = {
+            // the Swing text components of the X11 text component peers : JTextComponent checks whether they declare
+            // processInputMethodEvent (they do not ; see METHOD_LOOKUPS of the Desktop Swing extension)
+            "sun.awt.X11.XTextAreaPeer$AWTTextArea#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.awt.X11.XTextFieldPeer$XAWTTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
     };
 
     // ------------------------------------------------------------------------------------------------------------- JNI
