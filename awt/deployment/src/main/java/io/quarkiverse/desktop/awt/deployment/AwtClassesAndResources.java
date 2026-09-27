@@ -99,9 +99,11 @@ public final class AwtClassesAndResources {
 
     /**
      * Registered for serialization : the clipboard and drag and drop copy the serializable data they transfer within the
-     * application (sun.awt.datatransfer.TransferableProxy), and strings are the common case (DataFlavor.stringFlavor).
+     * application (sun.awt.datatransfer.TransferableProxy, and the JAVA_DATAFLAVOR native formats of the system
+     * clipboard) : strings, the common case (DataFlavor.stringFlavor), and the URLs of the application/x-java-url flavor
+     * (links dragged and copied between applications ; on macOS, reading one reads URL.serialVersionUID).
      */
-    static final String TRANSFERRED_SERIALIZABLE_CLASS = "java.lang.String";
+    static final List<String> TRANSFERRED_SERIALIZABLE_CLASSES = List.of("java.lang.String", "java.net.URL");
 
     /**
      * Registered for serialization : the text attributes (keys of the attributes of fonts and attributed strings,
