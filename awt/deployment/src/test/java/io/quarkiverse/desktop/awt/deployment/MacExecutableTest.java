@@ -4,16 +4,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * The information property list of macOS native executables, and the check of the libraries next to them.
+ * The build version and the information property list of macOS native executables, and the check of the libraries next
+ * to them.
  */
 class MacExecutableTest {
 
@@ -71,5 +77,76 @@ class MacExecutableTest {
             }
         }
         assertEquals(List.of("libosxapp.dylib"), MacExecutable.missingLibraries(executable));
+    }
+
+    @Test
+    void buildVersion() {
+        // LC_BUILD_VERSION, platform macOS, minos 11.0, sdk 14.5, after another load command
+        byte[] buildVersion = machO(command(0x19, 72), command(0x32, 24, 1, 0x000b0000, 0x000e0500, 0));
+        assertEquals(Optional.of(new MacExecutable.BuildVersion("11.0", "14.5")), MacExecutable.buildVersion(buildVersion));
+        assertEquals("-H:NativeLinkerOption=-Wl,-platform_version,macos,11.0,14.5",
+                MacExecutable.buildVersion(buildVersion).orElseThrow().linkerOption());
+        // the older LC_VERSION_MIN_MACOSX
+        byte[] versionMin = machO(command(0x24, 16, 0x000a0f07, 0x000b0300));
+        assertEquals(Optional.of(new MacExecutable.BuildVersion("10.15.7", "11.3")), MacExecutable.buildVersion(versionMin));
+        // another platform (iOS), no version command, not a Mach-O file
+        assertEquals(Optional.empty(), MacExecutable.buildVersion(machO(command(0x32, 24, 2, 0x00110000, 0x00110000, 0))));
+        assertEquals(Optional.empty(), MacExecutable.buildVersion(machO(command(0x19, 72))));
+        assertEquals(Optional.empty(), MacExecutable.buildVersion("MZ not a Mach-O file".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void universalFile() {
+        byte[] arm64 = machO(command(0x32, 24, 1, 0x000c0000, 0x000f0000, 0));
+        byte[] x86 = machO(command(0x32, 24, 1, 0x000a0f00, 0x000f0000, 0));
+        ByteBuffer fat = ByteBuffer.allocate(8 + 2 * 20 + x86.length + arm64.length).order(ByteOrder.BIG_ENDIAN);
+        fat.putInt(0xcafebabe).putInt(2);
+        int offset = 8 + 2 * 20;
+        fat.putInt(0x01000007).putInt(3).putInt(offset).putInt(x86.length).putInt(12);
+        fat.putInt(0x0100000c).putInt(0).putInt(offset + x86.length).putInt(arm64.length).putInt(12);
+        fat.put(x86).put(arm64);
+        String minimum = "x86_64".equals(System.getProperty("os.arch")) ? "10.15" : "12.0";
+        assertEquals(Optional.of(new MacExecutable.BuildVersion(minimum, "15.0")), MacExecutable.buildVersion(fat.array()));
+    }
+
+    /**
+     * The java launcher of the JDK running the tests has a build version.
+     */
+    @Test
+    @EnabledOnOs(OS.MAC)
+    void launcherBuildVersion() {
+        Optional<MacExecutable.BuildVersion> version = MacExecutable
+                .launcherBuildVersion(Path.of(System.getProperty("java.home")));
+        assertTrue(version.isPresent() && version.get().minimum().matches("\\d+\\.\\d+(\\.\\d+)?")
+                && version.get().sdk().matches("\\d+\\.\\d+(\\.\\d+)?"), String.valueOf(version));
+    }
+
+    /**
+     * A 64-bit Mach-O file with the given load commands.
+     */
+    private static byte[] machO(byte[]... commands) {
+        int size = 0;
+        for (byte[] command : commands) {
+            size += command.length;
+        }
+        ByteBuffer file = ByteBuffer.allocate(32 + size).order(ByteOrder.LITTLE_ENDIAN);
+        file.putInt(0xfeedfacf).putInt(0x0100000c).putInt(0).putInt(2).putInt(commands.length).putInt(size).putInt(0)
+                .putInt(0);
+        for (byte[] command : commands) {
+            file.put(command);
+        }
+        return file.array();
+    }
+
+    /**
+     * A load command : its type, size and first words (padded with zeros to its size).
+     */
+    private static byte[] command(int type, int size, int... words) {
+        ByteBuffer command = ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);
+        command.putInt(type).putInt(size);
+        for (int word : words) {
+            command.putInt(word);
+        }
+        return command.array();
     }
 }

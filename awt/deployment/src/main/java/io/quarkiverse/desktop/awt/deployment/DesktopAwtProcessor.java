@@ -857,15 +857,25 @@ class DesktopAwtProcessor {
     }
 
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
-    void macExecutable(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config,
+    void macExecutable(DesktopTargetPlatformBuildItem platform, DesktopAwtConfig config, NativeConfig nativeConfig,
             ApplicationInfoBuildItem applicationInfo, OutputTargetBuildItem outputTarget,
             BuildProducer<GeneratedResourceBuildItem> generatedResources) throws IOException {
-        if (!platform.isMac() || !config.macos().infoPlist()) {
+        if (!platform.isMac()) {
             return;
         }
-        String name = config.macos().applicationName().orElse(applicationInfo.getName());
-        List<String> args = MacExecutable.nativeImageArgs(MacExecutable.infoPlist(name, applicationInfo.getVersion()),
-                outputTarget.getOutputDirectory());
+        List<String> args = new ArrayList<>();
+        if (config.macos().jdkBuildVersion()) {
+            Path jdkHome = builderJdkHome(nativeConfig);
+            Optional<MacExecutable.BuildVersion> version = MacExecutable.launcherBuildVersion(jdkHome);
+            version.ifPresentOrElse(v -> args.add(v.linkerOption()), () -> LOGGER.warnf("The minimum macOS version and"
+                    + " the SDK version of the java launcher of %s are unknown : the native executable declares the ones"
+                    + " of the Xcode tools (it only starts on that macOS version and later)", jdkHome));
+        }
+        if (config.macos().infoPlist()) {
+            String name = config.macos().applicationName().orElse(applicationInfo.getName());
+            args.addAll(MacExecutable.nativeImageArgs(MacExecutable.infoPlist(name, applicationInfo.getVersion()),
+                    outputTarget.getOutputDirectory()));
+        }
         if (!args.isEmpty()) {
             LOGGER.debugf("macOS executable options : %s", args);
             generatedResources.produce(new GeneratedResourceBuildItem(MacExecutable.NATIVE_IMAGE_PROPERTIES,

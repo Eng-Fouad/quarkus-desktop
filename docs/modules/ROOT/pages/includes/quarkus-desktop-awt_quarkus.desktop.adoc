@@ -302,6 +302,29 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++false+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-macos-jdk-build-version]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-macos-jdk-build-version[`+++quarkus.desktop.awt.macos.jdk-build-version+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.macos.jdk-build-version+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the native executable declares the minimum macOS version and the SDK version of the `java` launcher of the JDK that builds it (its `LC_BUILD_VERSION` load command), as a JVM application does.
+
+macOS does not start an executable on a version older than its minimum version, and AppKit chooses the look of the windows (the height of the title bars for instance) and its compatibility behaviors from its SDK version. When disabled, the linker writes the version of the SDK of the Xcode tools as both : the executable then only starts on that macOS version and later, and gets the look of that version.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_MACOS_JDK_BUILD_VERSION+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_MACOS_JDK_BUILD_VERSION+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|`+++true+++`
+
 |===
 
 ifndef::no-duration-note[]

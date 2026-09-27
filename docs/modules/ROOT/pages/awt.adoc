@@ -180,6 +180,13 @@ JDK used for the native build to the `java.home` directory of the executable).
 launcher has one (bundle identifier, name and version, high resolution capability, and the text macOS shows when the
 application asks for the microphone).
 
+The executable declares the minimum macOS version and the SDK version of the `java` launcher of the JDK used for the
+native build (`otool -l` shows them in `LC_BUILD_VERSION`, for instance `minos 11.0` and `sdk 14.5`): it starts on the
+macOS versions the JDK supports, and AppKit gives its windows the same look as in JVM mode (AppKit chooses the height of
+the title bars, for instance, from the SDK version of the executable). Without it, the linker writes the version of the
+SDK of the Xcode tools as both, and the executable only starts on that macOS version and later
+(`quarkus.desktop.awt.macos.jdk-build-version=false`).
+
 Troubleshooting:
 
 * No window, and the process is idle: the first thread does not run the Cocoa event loop. `sample <pid> 3` shows the

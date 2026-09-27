@@ -222,6 +222,18 @@ public interface DesktopAwtConfig {
          */
         @WithDefault("false")
         boolean infoPlist();
+
+        /**
+         * Whether the native executable declares the minimum macOS version and the SDK version of the {@code java}
+         * launcher of the JDK that builds it (its {@code LC_BUILD_VERSION} load command), as a JVM application does.
+         * <p>
+         * macOS does not start an executable on a version older than its minimum version, and AppKit chooses the look of
+         * the windows (the height of the title bars for instance) and its compatibility behaviors from its SDK version.
+         * When disabled, the linker writes the version of the SDK of the Xcode tools as both : the executable then only
+         * starts on that macOS version and later, and gets the look of that version.
+         */
+        @WithDefault("true")
+        boolean jdkBuildVersion();
     }
 
     /**
