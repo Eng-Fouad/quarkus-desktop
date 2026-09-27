@@ -170,6 +170,31 @@ endif::add-copy-button-to-env-var[]
 |boolean
 |`+++true+++`
 
+a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-exact-reachability-metadata]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-exact-reachability-metadata[`+++quarkus.desktop.awt.exact-reachability-metadata+++`]##
+ifdef::add-copy-button-to-config-props[]
+config_property_copy_button:+++quarkus.desktop.awt.exact-reachability-metadata+++[]
+endif::add-copy-button-to-config-props[]
+
+
+[.description]
+--
+Whether the native build registers what the JDK desktop code looks up and may not find, for native executables built with `--exact-reachability-metadata` (GraalVM : a lookup that is not registered then fails with a missing registration error instead of answering "not found", even when "not found" is the expected answer).
+
+The registered lookups are those of the JDK expected to fail (the `BeanInfo`, `Customizer`, `PersistenceDelegate` and `Editor` classes that the JavaBeans API probes for the JDK classes that the extensions register for it, the region names that Nimbus probes, the `.properties` files next to the resource bundles of the JDK, the `META-INF/services` files of the desktop services, the `coalesceEvents` and `processInputMethodEvent` methods that the application components and text components do not declare...), the types whose members the JavaBeans API queries, and the var handles of the native memory accesses of Java2D and fonts. They make a native executable about 0.3 MB larger, and are useless without exact reachability metadata.
+
+By default, they are registered when `quarkus.native.additional-build-args` or `quarkus.native.additional-build-args-append` contains `--exact-reachability-metadata` (or `-H:ThrowMissingRegistrationErrors`). Set this property when the option is given another way.
+
+
+ifdef::add-copy-button-to-env-var[]
+Environment variable: env_var_with_copy_button:+++QUARKUS_DESKTOP_AWT_EXACT_REACHABILITY_METADATA+++[]
+endif::add-copy-button-to-env-var[]
+ifndef::add-copy-button-to-env-var[]
+Environment variable: `+++QUARKUS_DESKTOP_AWT_EXACT_REACHABILITY_METADATA+++`
+endif::add-copy-button-to-env-var[]
+--
+|boolean
+|
+
 a|icon:lock[title=Fixed at build time] [[quarkus-desktop-awt_quarkus-desktop-awt-macos-park-main-thread]] [.property-path]##link:#quarkus-desktop-awt_quarkus-desktop-awt-macos-park-main-thread[`+++quarkus.desktop.awt.macos.park-main-thread+++`]##
 ifdef::add-copy-button-to-config-props[]
 config_property_copy_button:+++quarkus.desktop.awt.macos.park-main-thread+++[]
