@@ -987,8 +987,12 @@ public final class AwtClassesAndResources {
     };
 
     static String[] LINUX_METHOD_LOOKUPS = {
-            // the Swing text components of the X11 text component peers : JTextComponent checks whether they declare
-            // processInputMethodEvent (they do not ; see METHOD_LOOKUPS of the Desktop Swing extension)
+            // the Swing text components of the X11 text component peers : JTextComponent checks whether they, or their
+            // superclasses below JTextComponent, declare processInputMethodEvent (they do not ; see METHOD_LOOKUPS of the
+            // Desktop Swing extension, absent from an application without Swing)
+            "javax.swing.JPasswordField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JTextArea#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
             "sun.awt.X11.XTextAreaPeer$AWTTextArea#processInputMethodEvent(java.awt.event.InputMethodEvent)",
             "sun.awt.X11.XTextFieldPeer$XAWTTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
     };
@@ -1626,6 +1630,15 @@ public final class AwtClassesAndResources {
     };
 
     static String[] MAC_METHOD_LOOKUPS = {
+            // the Swing text components of the text component peers and of the Aqua combo box editor : JTextComponent
+            // checks whether they, or their superclasses below JTextComponent, declare processInputMethodEvent (they do
+            // not ; see METHOD_LOOKUPS of the Desktop Swing extension, absent from an application without Swing)
+            "com.apple.laf.AquaComboBoxUI$AquaCustomComboTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JPasswordField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JTextArea#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "javax.swing.JTextField#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.lwawt.LWTextAreaPeer$ScrollableJTextArea$JTextAreaDelegate#processInputMethodEvent(java.awt.event.InputMethodEvent)",
+            "sun.lwawt.LWTextFieldPeer$JPasswordFieldDelegate#processInputMethodEvent(java.awt.event.InputMethodEvent)",
     };
 
     // JNI : the lookups of the macOS native code (libawt_lwawt, libosxapp), from DECLARE_CLASS / DECLARE_METHOD /
