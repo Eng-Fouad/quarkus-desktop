@@ -69,6 +69,19 @@ final class SwingApplicationClasses {
      */
     final Map<String, MethodInfo> inputMethodHandlers = new TreeMap<>();
 
+    /**
+     * The text components that do not declare {@code processInputMethodEvent(InputMethodEvent)} : Swing looks the
+     * method up, and expects not to find it ({@code "fqcn#processInputMethodEvent(java.awt.event.InputMethodEvent)"}).
+     */
+    final Set<String> inputMethodLookups = new TreeSet<>();
+
+    /**
+     * The icon directories of the application look and feels : the look and feels of the JDK load their icons with
+     * {@code SwingUtilities2.makeIcon(getClass(), ...)}, which looks in the package of the class of the look and feel
+     * first ({@code com/example/laf/icons/sortUp.png}), as glob patterns.
+     */
+    final Set<String> lookAndFeelIconGlobs = new TreeSet<>();
+
     private SwingApplicationClasses() {
     }
 
@@ -99,6 +112,11 @@ final class SwingApplicationClasses {
                     || hierarchy.isSubclass(classInfo.name(), SYNTH_PAINTER))) {
                 result.constructed.add(name);
             }
+            if (hierarchy.isSubclass(classInfo.name(), LOOK_AND_FEEL)) {
+                String packageName = classInfo.name().packagePrefix();
+                result.lookAndFeelIconGlobs.add((packageName == null ? "" : packageName.replace('.', '/') + "/")
+                        + "icons/*");
+            }
             if (hierarchy.isSubclass(classInfo.name(), PLAIN_VIEW)) {
                 result.queried.add(name);
             }
@@ -107,6 +125,8 @@ final class SwingApplicationClasses {
                         Type.create(INPUT_METHOD_EVENT, Type.Kind.CLASS));
                 if (handler != null) {
                     result.inputMethodHandlers.put(name, handler);
+                } else {
+                    result.inputMethodLookups.add(name + "#processInputMethodEvent(" + INPUT_METHOD_EVENT + ")");
                 }
             }
         }

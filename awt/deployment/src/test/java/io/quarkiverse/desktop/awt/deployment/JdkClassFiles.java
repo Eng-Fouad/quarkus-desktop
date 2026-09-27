@@ -174,8 +174,13 @@ final class JdkClassFiles implements Closeable {
         return switch (kind) {
             case "RUNTIME_INITIALIZED_PACKAGES" -> hasPackage(entry);
             case "RUNTIME_INITIALIZED_CLASSES", "REFLECTIVE_CLASSES", "REFLECTIVE_CONSTRUCTORS",
-                    "REFLECTIVE_PUBLIC_MEMBERS", "JAVA_BEANS_CLASSES", "JNI_RUNTIME_ACCESS_CLASSES", "SERVICE_PROVIDERS" ->
+                    "REFLECTIVE_PUBLIC_MEMBERS", "JAVA_BEANS_CLASSES", "REFLECTIVE_TYPES", "JNI_RUNTIME_ACCESS_CLASSES",
+                    "SERVICE_PROVIDERS" ->
                 hasType(entry);
+            // lookups expected to fail
+            case "NEGATIVE_CLASS_LOOKUPS" -> !hasType(entry);
+            // the class may not declare the method
+            case "METHOD_LOOKUPS" -> hasType(MemberEntry.method(entry).className());
             case "REFLECTIVE_METHODS", "JNI_RUNTIME_ACCESS_METHODS" -> hasMethod(MemberEntry.method(entry));
             case "REFLECTIVE_FIELDS", "JNI_RUNTIME_ACCESS_FIELDS" -> hasField(MemberEntry.field(entry));
             case "RESOURCE_BUNDLES" -> hasBundle(entry);

@@ -65,8 +65,9 @@ public class DesktopAwtRecorder {
      *
      * @param fontConfiguration the name of the directory (in {@code java.io.tmpdir}) to extract the embedded font
      *        configuration to, or {@code null} when none is embedded
+     * @param metalShaders whether the Metal shaders of the JDK are embedded (macOS)
      */
-    public void initRuntimeHome(String fontConfiguration) {
+    public void initRuntimeHome(String fontConfiguration, boolean metalShaders) {
         try {
             Path tmp = Path.of(System.getProperty("java.io.tmpdir"));
             Path home = tmp.resolve(RUNTIME_HOME);
@@ -84,9 +85,11 @@ public class DesktopAwtRecorder {
                     System.setProperty("sun.awt.fontconfig", file.toString());
                 }
             }
-            // macOS : the shaders must match the libraries next to the executable, the directory is shared by every
-            // native executable (another one may have written the shaders of another JDK)
-            extractIfChanged(METAL_SHADERS, home.resolve("lib").resolve("shaders.metallib"));
+            if (metalShaders) {
+                // macOS : the shaders must match the libraries next to the executable, the directory is shared by every
+                // native executable (another one may have written the shaders of another JDK)
+                extractIfChanged(METAL_SHADERS, home.resolve("lib").resolve("shaders.metallib"));
+            }
         } catch (IOException | RuntimeException e) {
             LOGGER.warnf(e, "Unable to prepare the java.home directory of the native executable");
         }

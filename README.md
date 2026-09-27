@@ -19,6 +19,26 @@ build Quarkus from it) and GraalVM 25.1 or later.
 | Desktop Swing | `io.quarkiverse.desktop:quarkus-desktop-swing` | Swing components, the look and feels of the JDK (Metal, Nimbus, Synth, Windows, GTK, Motif), text, printing (includes Desktop AWT) |
 
 Please refer to the documentation available at https://docs.quarkiverse.io/quarkus-desktop/dev/index.html
+(in this repository: [docs/modules/ROOT/pages](docs/modules/ROOT/pages)): installation, supported platforms, every
+configuration property, native executables on Windows, Linux and macOS, HiDPI displays and Java2D pipelines, fonts and
+languages, accessibility, the JavaBeans API (the bean properties of the AWT classes are registered by default, about
+0.3 MB; those of the Swing classes are opt-in, 3 to 4 MB), exact reachability metadata, and the known limitations of
+native executables.
+
+## Platforms
+
+| Platform | JVM mode | Native executable |
+|---|---|---|
+| Windows x64 | yes | yes (native build on Windows with Visual Studio) |
+| Linux x64 | yes | yes (native build on Linux or in a container; X11 or XWayland at run time) |
+| macOS on Apple silicon | yes | yes, with the quarkus-awt of the Quarkus pull request [Enable quarkus-awt on macOS](https://github.com/quarkusio/quarkus/pull/56979) and GraalVM 25.1 or later (only verifiable on a Mac, see below) |
+
+## Showcase
+
+The [Quarkus Desktop showcase](https://github.com/Eng-Fouad/quarkus-desktop-showcase) exercises the AWT, Java2D and Swing
+features of the JDK on 75 pages (about 3800 checks), and compares JVM mode and native executables pixel by pixel and
+check by check (also with other Java2D pipelines, at the real display scale, and with exact reachability metadata). It is
+the functional test bench of these extensions: run its cycle after changing a list of classes and resources.
 
 ## Verifying on macOS
 

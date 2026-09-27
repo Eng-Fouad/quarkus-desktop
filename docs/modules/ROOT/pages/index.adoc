@@ -57,23 +57,29 @@ implementation("io.quarkiverse.desktop:quarkus-desktop-swing:{project-version}")
 
 == Supported platforms
 
-[cols="1,1,1"]
+[cols="1,1,3"]
 |===
 |Platform |JVM mode |Native executable
 
 |Windows x64
 |Yes
-|Yes
+|Yes: a native build on Windows, with Visual Studio (the {cpp} build tools). The executable is DPI aware, has the
+visual styles of Windows, can be a GUI application without console, and comes with the JDK libraries and the Visual
+{cpp} runtime it needs (see xref:awt.adoc#windows[Windows]). Verified with the showcase (see <<verification>>): every
+page renders the same pixels and gives the same checks as in JVM mode, with the Direct3D, GDI and OpenGL pipelines, at
+100 % and 150 % scale.
 
 |Linux x64
 |Yes
-|Yes
+|Yes: a native build on Linux or in a container. The executable uses the X11 libraries of the system (XWayland on
+Wayland), GTK 3 for the GTK look and feel and the native dialogs, CUPS and ALSA (see xref:awt.adoc#linux[Linux]).
 
 |macOS (Apple silicon)
 |Yes
 |Yes, with the `quarkus-awt` of the Quarkus pull request
 https://github.com/quarkusio/quarkus/pull/56979["Enable quarkus-awt on macOS"] (not in a Quarkus release yet), and
-GraalVM 25.1 or later (see xref:awt.adoc#macos[macOS])
+GraalVM 25.1 or later (see xref:awt.adoc#macos[macOS]). Implemented and unit tested, but only verifiable on a Mac: see
+xref:macos-verification.adoc[Verifying macOS support].
 |===
 
 Native executables need GraalVM for JDK 25 and Quarkus {quarkus-version} or later (on macOS: GraalVM 25.1 or later, and
@@ -86,6 +92,96 @@ a Quarkus built from the pull request above).
 * xref:macos-verification.adoc[Verifying macOS support]: how to check the macOS native executables on a Mac, and how to
 report the results.
 
+[[verification]]
+== Verification
+
+The https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] is an application of 75 pages (about
+3800 checks) that exercise the AWT, Java2D, text, image, Swing, look and feel, data transfer, desktop, printing,
+accessibility, JavaBeans and sound features of the JDK. Its tools run it in JVM mode and as a native executable, render
+every page to an image and compare the two runs pixel by pixel and check by check, also with exact reachability metadata
+(see xref:awt.adoc#exact-reachability-metadata[Exact reachability metadata]). On Windows, every page gives the same
+result in both runs, except the page that shows where a native executable legitimately differs (its known limitations,
+see xref:awt.adoc#limitations[Limitations]). It also has a Docker image for the Linux runs, and the steps to verify
+macOS on a Mac.
+
+[[configuration]]
 == Configuration
 
-See xref:config-reference.adoc[the configuration reference].
+The properties are fixed when the native executable is built and only apply to native executables (JVM mode uses the
+`java` launcher and the JDK as they are), except `quarkus.desktop.swing.look-and-feel`, a run time property that also
+applies in JVM mode.
+
+[cols="2,1,4"]
+|===
+|Property |Default |Description
+
+|`quarkus.desktop.awt.java-beans.jdk-classes`
+|`true`
+|The bean properties of the AWT classes for the JavaBeans API (about 0.3 MB), see
+xref:awt.adoc#java-beans[JavaBeans].
+
+|`quarkus.desktop.awt.exact-reachability-metadata`
+|detected
+|The lookups for native executables built with `--exact-reachability-metadata` (about 0.3 MB), see
+xref:awt.adoc#exact-reachability-metadata[Exact reachability metadata].
+
+|`quarkus.desktop.awt.windows.dpi-aware`
+|`true`
+|Windows: the executable scales its user interface to the display, as the `java` launcher does.
+
+|`quarkus.desktop.awt.windows.manifest`
+|`true`
+|Windows: the application manifest of the `java` launcher (visual styles, DPI awareness).
+
+|`quarkus.desktop.awt.windows.subsystem`
+|`console`
+|Windows: `windows` for a GUI application without console window (as `javaw`).
+
+|`quarkus.desktop.awt.windows.copy-vc-runtime`
+|`true`
+|Windows: copies the Visual {cpp} runtime next to the executable.
+
+|`quarkus.desktop.awt.windows.font-configuration`
+|`jdk`
+|Windows: the font configuration of the JDK (all the languages), or `minimal` (Latin only).
+
+|`quarkus.desktop.awt.windows.access-bridge`
+|`true`
+|Windows: the Java Access Bridge for screen readers.
+
+|`quarkus.desktop.awt.macos.park-main-thread`
+|`true`
+|macOS: the first thread runs the Cocoa event loop, the application runs on a new thread named `main`.
+
+|`quarkus.desktop.awt.macos.main-thread-stack-size`
+|`8M`
+|macOS: the stack size of that `main` thread.
+
+|`quarkus.desktop.awt.macos.exit-halt-timeout`
+|`10S`
+|macOS: how long `System.exit` may take before the process is halted.
+
+|`quarkus.desktop.awt.macos.application-name`
+|`quarkus.application.name`
+|macOS: the name of the application in the menu bar and the Dock.
+
+|`quarkus.desktop.awt.macos.info-plist`
+|`false`
+|macOS: embeds an information property list in the executable.
+
+|`quarkus.desktop.swing.look-and-feel`
+|
+|The look and feel set at startup (`system`, `cross-platform`, `nimbus`... or a class name), see
+xref:swing.adoc#look-and-feel[Look and feel].
+
+|`quarkus.desktop.swing.included-look-and-feels`
+|`all`
+|The look and feels of the JDK included in the executable (about 10 MB for all of them).
+
+|`quarkus.desktop.swing.java-beans.jdk-classes`
+|`false`
+|The bean properties of the Swing classes for the JavaBeans API (3 to 4 MB), see
+xref:swing.adoc#java-beans[JavaBeans].
+|===
+
+See xref:config-reference.adoc[the configuration reference] for the details.

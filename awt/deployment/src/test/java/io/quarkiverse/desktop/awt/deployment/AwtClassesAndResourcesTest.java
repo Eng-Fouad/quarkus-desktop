@@ -54,6 +54,9 @@ class AwtClassesAndResourcesTest {
             Map.entry("REFLECTIVE_FIELDS", FIELD_ENTRY),
             Map.entry("REFLECTIVE_PUBLIC_MEMBERS", NAME_ENTRY),
             Map.entry("JAVA_BEANS_CLASSES", NAME_ENTRY),
+            Map.entry("REFLECTIVE_TYPES", NAME_ENTRY),
+            Map.entry("NEGATIVE_CLASS_LOOKUPS", NAME_ENTRY),
+            Map.entry("METHOD_LOOKUPS", METHOD_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_CLASSES", NAME_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_METHODS", METHOD_ENTRY),
             Map.entry("JNI_RUNTIME_ACCESS_FIELDS", FIELD_ENTRY),
@@ -176,7 +179,8 @@ class AwtClassesAndResourcesTest {
      */
     private static void assertEntriesExist(String platform) throws IllegalAccessException {
         List<String> errors = new ArrayList<>();
-        for (String kind : List.of("REFLECTIVE_CLASSES", "REFLECTIVE_CONSTRUCTORS", "JNI_RUNTIME_ACCESS_CLASSES",
+        for (String kind : List.of("REFLECTIVE_CLASSES", "REFLECTIVE_CONSTRUCTORS", "REFLECTIVE_TYPES",
+                "JNI_RUNTIME_ACCESS_CLASSES",
                 "RUNTIME_INITIALIZED_CLASSES", "SERVICE_PROVIDERS", "RESOURCE_BUNDLES")) {
             for (String entry : entries(kind, platform)) {
                 try {
@@ -220,6 +224,27 @@ class AwtClassesAndResourcesTest {
                 } catch (ReflectiveOperationException e) {
                     errors.add(kind + " : not found " + entry + " (" + e + ")");
                 }
+            }
+        }
+        // lookups expected to fail : the classes do not exist
+        for (String entry : entries("NEGATIVE_CLASS_LOOKUPS", platform)) {
+            try {
+                type(entry);
+                errors.add("NEGATIVE_CLASS_LOOKUPS : the class exists " + entry);
+            } catch (ClassNotFoundException e) {
+                // expected
+            }
+        }
+        // method lookups : the class and the parameter types exist, the class may not declare the method
+        for (String entry : entries("METHOD_LOOKUPS", platform)) {
+            MemberEntry method = MemberEntry.method(entry);
+            try {
+                type(method.className());
+                for (String parameterType : method.parameterTypes()) {
+                    type(parameterType);
+                }
+            } catch (ClassNotFoundException e) {
+                errors.add("METHOD_LOOKUPS : class not found " + entry);
             }
         }
         for (String kind : List.of("REFLECTIVE_FIELDS", "JNI_RUNTIME_ACCESS_FIELDS")) {

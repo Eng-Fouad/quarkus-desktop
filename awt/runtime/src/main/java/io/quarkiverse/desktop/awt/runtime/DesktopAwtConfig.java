@@ -30,6 +30,25 @@ public interface DesktopAwtConfig {
     JavaBeans javaBeans();
 
     /**
+     * Whether the native build registers what the JDK desktop code looks up and may not find, for native executables
+     * built with {@code --exact-reachability-metadata} (GraalVM : a lookup that is not registered then fails with a
+     * missing registration error instead of answering "not found", even when "not found" is the expected answer).
+     * <p>
+     * The registered lookups are those of the JDK expected to fail (the {@code BeanInfo}, {@code Customizer},
+     * {@code PersistenceDelegate} and {@code Editor} classes that the JavaBeans API probes for the JDK classes that the
+     * extensions register for it, the region names that Nimbus probes, the {@code .properties} files next to the resource
+     * bundles of the JDK, the {@code META-INF/services} files of the desktop services, the {@code coalesceEvents} and
+     * {@code processInputMethodEvent} methods that the application components and text components do not declare...),
+     * the types whose members the JavaBeans API queries, and the var handles of the native memory accesses of Java2D and
+     * fonts. They make a native executable about 0.3 MB larger, and are useless without exact reachability metadata.
+     * <p>
+     * By default, they are registered when {@code quarkus.native.additional-build-args} or
+     * {@code quarkus.native.additional-build-args-append} contains {@code --exact-reachability-metadata} (or
+     * {@code -H:ThrowMissingRegistrationErrors}). Set this property when the option is given another way.
+     */
+    Optional<Boolean> exactReachabilityMetadata();
+
+    /**
      * The JavaBeans API ({@code java.beans}) in native executables.
      * <p>
      * The JavaBeans API reads classes with reflection. Native executables always support its core : the property
