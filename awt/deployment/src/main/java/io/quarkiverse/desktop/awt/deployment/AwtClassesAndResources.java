@@ -1627,6 +1627,9 @@ public final class AwtClassesAndResources {
     };
 
     static String[] MAC_NEGATIVE_CLASS_LOOKUPS = {
+            // fonts : the font configuration of macOS names the charset "default" for its logical fonts, and
+            // FontConfiguration.getFontCharsetEncoder looks it up as a class (ClassNotFoundException expected)
+            "default",
     };
 
     static String[] MAC_METHOD_LOOKUPS = {
