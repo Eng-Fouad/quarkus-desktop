@@ -175,6 +175,9 @@ public class AwtItMain implements QuarkusApplication {
         StringBuilder environment = new StringBuilder();
         environment.append("headless=").append(headless);
         environment.append(" mode=").append(ImageMode.current().isNativeImage() ? "native" : "jvm");
+        // macOS : Quarkus runs on a new thread named main, the first thread runs the Cocoa event loop
+        environment.append(" thread=").append(Thread.currentThread().getName());
+        environment.append(" mainThreadParked=").append(System.getProperty("io.quarkiverse.desktop.main-thread-parked"));
         environment.append(" dpiaware=").append(System.getProperty("sun.java2d.dpiaware"));
         environment.append(" javaHome=").append(System.getProperty("java.home") != null);
         environment.append(" fontconfig=").append(System.getProperty("sun.awt.fontconfig") != null);

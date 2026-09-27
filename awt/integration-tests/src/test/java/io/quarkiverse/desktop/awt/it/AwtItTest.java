@@ -36,6 +36,12 @@ public class AwtItTest {
         }
         // Same as the JVM running the tests : the text of the native components is encoded with it
         assertEquals(System.getProperty("sun.io.unicode.encoding"), value(output, "unicodeEncoding"), output);
+        if (System.getProperty("native.image.path") != null) {
+            // the native executable runs the application on the thread main (a new one on macOS, where the first
+            // thread of the process runs the Cocoa event loop)
+            assertEquals("main", value(output, "thread"), output);
+            assertEquals(OS.MAC.isCurrentOs() ? "true" : "null", value(output, "mainThreadParked"), output);
+        }
         if (!GraphicsEnvironment.isHeadless()) {
             // The application has a display when the tests have one
             assertTrue(output.contains("headless=false"), output);
@@ -45,6 +51,11 @@ public class AwtItTest {
             double scale = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice()
                     .getDefaultConfiguration().getDefaultTransform().getScaleX();
             assertEquals(scale, Double.parseDouble(value(output, "scale")), 0.001, output);
+            if (OS.MAC.isCurrentOs()) {
+                // Same Java2D pipeline as the JVM running the tests : Metal (OpenGL when the Metal shaders are missing)
+                assertEquals(GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice()
+                        .getDefaultConfiguration().getClass().getName(), value(output, "configuration"), output);
+            }
             // Same desktop integration as the JVM running the tests
             assertEquals(String.valueOf(Desktop.isDesktopSupported()), value(output, "desktop"), output);
             assertEquals(String.valueOf(Taskbar.isTaskbarSupported()), value(output, "taskbar"), output);
