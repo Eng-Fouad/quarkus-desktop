@@ -212,6 +212,11 @@ class DesktopSwingProcessor {
                 SwingClassesAndResources.WINDOWS_RESOURCE_GLOBS,
                 SwingClassesAndResources.LINUX_RESOURCE_GLOBS,
                 SwingClassesAndResources.MAC_RESOURCE_GLOBS))));
+        globs.addAll(ReachabilityLookups.moduleGlobs(List.of(entries(platform, config,
+                SwingClassesAndResources.RESOURCE_LOOKUPS,
+                SwingClassesAndResources.WINDOWS_RESOURCE_LOOKUPS,
+                SwingClassesAndResources.LINUX_RESOURCE_LOOKUPS,
+                SwingClassesAndResources.MAC_RESOURCE_LOOKUPS))));
         lookups.produce(new ReachabilityLookupsBuildItem(types, List.of(entries(platform, config,
                 SwingClassesAndResources.METHOD_LOOKUPS,
                 SwingClassesAndResources.WINDOWS_METHOD_LOOKUPS,

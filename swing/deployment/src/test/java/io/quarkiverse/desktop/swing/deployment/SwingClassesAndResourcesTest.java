@@ -67,6 +67,7 @@ class SwingClassesAndResourcesTest {
             Map.entry("JNI_RUNTIME_ACCESS_FIELDS", FIELD_ENTRY),
             Map.entry("RESOURCE_BUNDLES", NAME_ENTRY),
             Map.entry("RESOURCE_GLOBS", GLOB_ENTRY),
+            Map.entry("RESOURCE_LOOKUPS", GLOB_ENTRY),
             Map.entry("SERVICE_PROVIDERS", NAME_ENTRY));
 
     private static final Map<String, Class<?>> PRIMITIVES = Map.of("boolean", boolean.class, "byte", byte.class,
@@ -199,6 +200,15 @@ class SwingClassesAndResourcesTest {
             }
         }
         assertTrue(errors.isEmpty(), "no JDK resource matches " + errors);
+        // the lookups expected to fail find nothing, else they are resource globs
+        List<String> found = new ArrayList<>();
+        for (String glob : entries("RESOURCE_LOOKUPS", platform)) {
+            Pattern pattern = globPattern(glob);
+            if (resources.stream().anyMatch(resource -> pattern.matcher(resource).matches())) {
+                found.add(glob);
+            }
+        }
+        assertTrue(found.isEmpty(), "JDK resources match the resource lookups " + found);
     }
 
     /**

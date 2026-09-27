@@ -57,6 +57,8 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * a JDK bundle from its package). The locales of a bundle included in the native executable are those of the
  * application ({@code quarkus.locales}).</li>
  * <li>{@code RESOURCE_GLOBS} : resources included in the executable, as glob patterns.</li>
+ * <li>{@code RESOURCE_LOOKUPS} : resources that Swing looks up and expects not to find (they do not exist in the JDK), as
+ * glob patterns, for {@code --exact-reachability-metadata}.</li>
  * <li>{@code SERVICE_PROVIDERS} : service provider classes of JDK modules, registered for reflection (constructors and
  * methods).</li>
  * </ul>
@@ -65,8 +67,9 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * GTK 3) with the checks of the Swing integration tests (every look and feel with a gallery of the components, their
  * defaults and key bindings, HTML and RTF text, formatters, table and tree editors, file and color choosers, option
  * panes, internal frames, property transfers, printing to a PostScript stream, popups, timers and workers). The
- * lookups for {@code --exact-reachability-metadata} come from native executables of the showcase built with it (Windows,
- * JDK 25), and from the JDK 25 classes (the text components that may declare {@code processInputMethodEvent}).
+ * lookups for {@code --exact-reachability-metadata} come from native executables of the showcase built with it (Windows
+ * and Linux, JDK 25), and from the JDK 25 classes (the text components that may declare
+ * {@code processInputMethodEvent}).
  */
 public final class SwingClassesAndResources {
 
@@ -1092,8 +1095,20 @@ public final class SwingClassesAndResources {
             // GTK look and feel : icons, and the theme of the window decorations drawn by the look and feel (Metacity)
             "com/sun/java/swing/plaf/gtk/icons/*",
             "com/sun/java/swing/plaf/gtk/resources/metacity/**",
-            // the icons of the Synth defaults, that GTKStyle.get resolves through UIManager (option pane, file chooser,
-            // the Java cup of the internal frames)
+    };
+
+    // Resources that the JDK looks up and expects not to find : registered for --exact-reachability-metadata only (a
+    // lookup of a resource that is not registered fails there, instead of finding nothing).
+
+    static String[] RESOURCE_LOOKUPS = {
+    };
+
+    static String[] WINDOWS_RESOURCE_LOOKUPS = {
+    };
+
+    static String[] LINUX_RESOURCE_LOOKUPS = {
+            // GTK look and feel : GTKStyle.get resolves defaults of the Synth look and feel through UIManager, icons that
+            // the JDK does not have (option pane, file chooser, the Java cup of the internal frames)
             "javax/swing/plaf/synth/icons/*",
     };
 
@@ -1156,5 +1171,8 @@ public final class SwingClassesAndResources {
     };
 
     static String[] MAC_RESOURCE_GLOBS = {
+    };
+
+    static String[] MAC_RESOURCE_LOOKUPS = {
     };
 }
