@@ -101,11 +101,23 @@ final class WindowsExecutable {
     }
 
     /**
-     * The content of a {@code native-image.properties} file with the given native build options.
+     * The content of a {@code native-image.properties} file with the given native build options, in ASCII : native-image
+     * reads these files with {@code Properties.load(InputStream)}, as ISO-8859-1, so the characters above {@code ~} (in
+     * the path of the manifest when the user name or the project directory has accents) are Unicode escapes.
      */
     static String nativeImageProperties(List<String> args) {
         // native-image splits Args on white space ; properties files use \ as escape character
-        return "Args = " + String.join(" ", args).replace("\\", "\\\\") + "\n";
+        String value = String.join(" ", args).replace("\\", "\\\\");
+        StringBuilder properties = new StringBuilder("Args = ");
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c > '~') {
+                properties.append(String.format("\\u%04X", (int) c));
+            } else {
+                properties.append(c);
+            }
+        }
+        return properties.append('\n').toString();
     }
 
     /**
