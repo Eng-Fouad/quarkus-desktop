@@ -233,7 +233,7 @@ class DesktopSwingProcessor {
             BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
             BuildProducer<ReachabilityLookupsBuildItem> lookups) {
         Set<String> classes = new TreeSet<>();
-        for (ApplicationArchive archive : applicationArchives.getAllApplicationArchives()) {
+        for (ApplicationArchive archive : applicationArchives.getAllArchives()) {
             archive.accept(tree -> tree.walk(visit -> {
                 String resource = visit.getRelativePath("/");
                 if (SynthXmlClasses.isCandidate(resource)) {

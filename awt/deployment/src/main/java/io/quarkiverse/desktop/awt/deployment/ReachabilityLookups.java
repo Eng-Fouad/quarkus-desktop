@@ -21,7 +21,7 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeSet;
 
-import io.quarkus.builder.Json;
+import io.quarkus.bootstrap.json.Json;
 
 /**
  * The lookups of the JDK desktop code that a native executable built with {@code --exact-reachability-metadata} must
