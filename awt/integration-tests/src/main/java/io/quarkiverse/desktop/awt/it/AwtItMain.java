@@ -71,7 +71,9 @@ import java.util.concurrent.TimeUnit;
 import javax.accessibility.AccessibleContext;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.ImageWriter;
+import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.metadata.IIOMetadataFormat;
 import javax.imageio.metadata.IIOMetadataFormatImpl;
 import javax.print.DocFlavor;
@@ -313,7 +315,27 @@ public class AwtItMain implements QuarkusApplication {
         String description = IIOMetadataFormatImpl.getStandardFormatInstance().getElementDescription("Chroma",
                 Locale.ENGLISH);
         require(description != null, "no description of the standard metadata format");
-        return result.append("standard=").append(description.replace(' ', '_')).toString();
+        result.append("standard=").append(description.replace(' ', '_'));
+        // TIFF : the resource bundle of the stream metadata format does not exist either, and the native metadata format
+        // classes that the image and stream metadata name do not exist (JDK bugs : null, IllegalStateException)
+        ImageReader tiff = ImageIO.getImageReadersByFormatName("tiff").next();
+        IIOMetadataFormat streamFormat = tiff.getOriginatingProvider()
+                .getStreamMetadataFormat("javax_imageio_tiff_stream_1.0");
+        require(streamFormat != null, "no TIFF stream metadata format");
+        require(streamFormat.getElementDescription("ByteOrder", Locale.US) == null, "TIFF stream metadata described");
+        ImageWriter tiffWriter = ImageIO.getImageWriter(tiff);
+        for (IIOMetadata metadata : java.util.List.of(tiffWriter.getDefaultStreamMetadata(null),
+                tiffWriter.getDefaultImageMetadata(
+                        ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_RGB),
+                        tiffWriter.getDefaultWriteParam()))) {
+            try {
+                metadata.getMetadataFormat(metadata.getNativeMetadataFormatName());
+                require(false, "the " + metadata.getNativeMetadataFormatName() + " format exists");
+            } catch (IllegalStateException e) {
+                result.append(' ').append(metadata.getNativeMetadataFormatName()).append("=no_format");
+            }
+        }
+        return result.toString();
     }
 
     /**

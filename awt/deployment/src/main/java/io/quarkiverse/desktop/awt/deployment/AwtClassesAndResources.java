@@ -114,15 +114,18 @@ public final class AwtClassesAndResources {
             "java.text.AttributedCharacterIterator$Attribute");
 
     /**
-     * Resource bundles that the JDK looks up but does not have : the descriptions of the WBMP and TIFF image metadata
-     * formats ({@code IIOMetadataFormatImpl.getElementDescription} catches the {@code MissingResourceException} and
-     * returns {@code null}). GraalVM 25.3 and later throw a {@code MissingResourceRegistrationError} instead when the
-     * bundle is not registered : registered, the lookup fails with a {@code MissingResourceException} as in the JVM.
-     * For {@code --exact-reachability-metadata}, the extension also registers the lookups of their classes (for the
-     * locales of the application), provider and {@code .properties} files.
+     * Resource bundles that the JDK looks up but does not have : the descriptions of the WBMP image metadata format, and
+     * of the TIFF image and stream metadata formats (their base names are in {@code javax.imageio.plugins.tiff}, their
+     * bundles in {@code com.sun.imageio.plugins.tiff}) : {@code IIOMetadataFormatImpl.getElementDescription} and
+     * {@code TIFFMetadataFormat.getElementDescription} catch the {@code MissingResourceException} and return
+     * {@code null}. GraalVM 25.3 and later throw a {@code MissingResourceRegistrationError} instead when the bundle is
+     * not registered : registered, the lookup fails with a {@code MissingResourceException} as in the JVM. For
+     * {@code --exact-reachability-metadata}, the extension also registers the lookups of their classes (for the locales
+     * of the application), provider and {@code .properties} files.
      */
     static final List<String> ABSENT_RESOURCE_BUNDLES = List.of("com.sun.imageio.plugins.wbmp.WBMPMetadataFormatResources",
-            "javax.imageio.plugins.tiff.TIFFImageMetadataFormatResources");
+            "javax.imageio.plugins.tiff.TIFFImageMetadataFormatResources",
+            "javax.imageio.plugins.tiff.TIFFStreamMetadataFormatResources");
 
     /**
      * The service interfaces of the JDK desktop modules whose providers the JDK also looks up on the class path
@@ -970,6 +973,12 @@ public final class AwtClassesAndResources {
     };
 
     static String[] NEGATIVE_CLASS_LOOKUPS = {
+            // ImageIO : the native metadata format classes that the TIFF image and stream metadata name
+            // (TIFFImageMetadata and TIFFStreamMetadata.NATIVE_METADATA_FORMAT_CLASS_NAME, the real classes are in
+            // com.sun.imageio.plugins.tiff) : IIOMetadata.getMetadataFormat of these metadata throws an
+            // IllegalStateException, as in the JVM, instead of a missing registration error
+            "javax.imageio.plugins.tiff.TIFFImageMetadataFormat",
+            "javax.imageio.plugins.tiff.TIFFStreamMetadataFormat",
     };
 
     static String[] WINDOWS_NEGATIVE_CLASS_LOOKUPS = {
