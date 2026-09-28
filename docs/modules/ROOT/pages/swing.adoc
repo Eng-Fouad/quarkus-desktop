@@ -232,8 +232,9 @@ The bean properties of the Swing classes are optional (disabled by default):
 the public constructors, methods and fields of the public classes of `javax.swing`, `javax.swing.border`,
 `javax.swing.event`, `javax.swing.table` and `javax.swing.tree`, of the text components, documents and formatters of
 `javax.swing.text`, and of the UI resources of `javax.swing.plaf`, with the AWT classes that they extend (as
-`quarkus.desktop.awt.java-beans.jdk-classes=true` does). The `Introspector` then finds the properties and event sets of the
-Swing components, and `XMLEncoder` and `XMLDecoder` write and read Swing forms and frames as in JVM mode: components
+`quarkus.desktop.awt.java-beans.jdk-classes=true` does), and the icons of their bean infos (`BeanInfo.getIcon`). The
+`Introspector` then finds the properties and event sets of the Swing components, and `XMLEncoder` and `XMLDecoder` write
+and read Swing forms and frames as in JVM mode: components
 with their borders, layouts and models, `JTabbedPane` tabs, `Box` layouts, combo box and list models, trees with their
 nodes, menus with their accelerators (`KeyStroke`).
 

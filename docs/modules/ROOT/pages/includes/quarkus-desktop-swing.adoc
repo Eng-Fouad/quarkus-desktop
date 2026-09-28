@@ -40,7 +40,7 @@ endif::add-copy-button-to-config-props[]
 
 [.description]
 --
-Whether the JDK Swing classes support the JavaBeans API in native executables : their public constructors, methods and fields are registered for reflection, so that the `Introspector` finds their bean properties and event sets, and that `XMLEncoder`, `XMLDecoder`, `Statement`, `Expression`, `EventHandler` and `Beans.instantiate` work with them, as in JVM mode. The AWT classes that they extend are registered too (as with `quarkus.desktop.awt.java-beans.jdk-classes=true`).
+Whether the JDK Swing classes support the JavaBeans API in native executables : their public constructors, methods and fields are registered for reflection, so that the `Introspector` finds their bean properties and event sets, and that `XMLEncoder`, `XMLDecoder`, `Statement`, `Expression`, `EventHandler` and `Beans.instantiate` work with them, as in JVM mode. The AWT classes that they extend are registered too (as with `quarkus.desktop.awt.java-beans.jdk-classes=true`), and the icons of the bean infos of the Swing components are included (`BeanInfo.getIcon`).
 
 The classes are the public classes of `javax.swing`, `javax.swing.border`, `javax.swing.event`, `javax.swing.table` and `javax.swing.tree` (components, models, layouts, borders, actions, key strokes, icons, renderers and editors, events and listeners), the text components, documents and formatters of `javax.swing.text`, and the UI resources of `javax.swing.plaf`. For instance `XMLEncoder` writes a `JPanel` with its border, layout and components, a `JTabbedPane`, a `JTree` with its nodes, and `XMLDecoder` reads them.
 

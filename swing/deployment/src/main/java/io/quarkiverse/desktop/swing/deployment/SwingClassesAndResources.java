@@ -75,6 +75,13 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  */
 public final class SwingClassesAndResources {
 
+    /**
+     * The icons of the bean infos of the Swing components ({@code BeanInfo.getIcon} of a {@code javax.swing} class
+     * annotated with {@code @JavaBean} : {@code SimpleBeanInfo} loads {@code JButtonColor16.gif}...), included with the
+     * {@code JAVA_BEANS_CLASSES} (179 GIF files, 36 KB).
+     */
+    static final String JAVA_BEANS_ICONS = "javax/swing/beaninfo/images/*";
+
     private SwingClassesAndResources() {
         // Constants
     }

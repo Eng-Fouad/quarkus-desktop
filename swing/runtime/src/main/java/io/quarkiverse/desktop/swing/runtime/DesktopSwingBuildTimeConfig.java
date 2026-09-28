@@ -47,7 +47,8 @@ public interface DesktopSwingBuildTimeConfig {
          * methods and fields are registered for reflection, so that the {@code Introspector} finds their bean properties
          * and event sets, and that {@code XMLEncoder}, {@code XMLDecoder}, {@code Statement}, {@code Expression},
          * {@code EventHandler} and {@code Beans.instantiate} work with them, as in JVM mode. The AWT classes that they
-         * extend are registered too (as with {@code quarkus.desktop.awt.java-beans.jdk-classes=true}).
+         * extend are registered too (as with {@code quarkus.desktop.awt.java-beans.jdk-classes=true}), and the icons of
+         * the bean infos of the Swing components are included ({@code BeanInfo.getIcon}).
          * <p>
          * The classes are the public classes of {@code javax.swing}, {@code javax.swing.border},
          * {@code javax.swing.event}, {@code javax.swing.table} and {@code javax.swing.tree} (components, models,

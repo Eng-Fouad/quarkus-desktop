@@ -212,6 +212,9 @@ class DesktopSwingProcessor {
                 SwingClassesAndResources.WINDOWS_RESOURCE_LOOKUPS,
                 SwingClassesAndResources.LINUX_RESOURCE_LOOKUPS,
                 SwingClassesAndResources.MAC_RESOURCE_LOOKUPS))));
+        if (config.javaBeans().jdkClasses()) {
+            globs.addAll(ReachabilityLookups.moduleGlobs(List.of(SwingClassesAndResources.JAVA_BEANS_ICONS)));
+        }
         lookups.produce(new ReachabilityLookupsBuildItem(types, List.of(entries(platform, config,
                 SwingClassesAndResources.METHOD_LOOKUPS,
                 SwingClassesAndResources.WINDOWS_METHOD_LOOKUPS,
@@ -348,6 +351,10 @@ class DesktopSwingProcessor {
                 SwingClassesAndResources.WINDOWS_RESOURCE_GLOBS,
                 SwingClassesAndResources.LINUX_RESOURCE_GLOBS,
                 SwingClassesAndResources.MAC_RESOURCE_GLOBS))).forEach(resources::produce);
+        if (config.javaBeans().jdkClasses()) {
+            // the icons of the bean infos of the Swing components
+            ResourceGlobs.patterns(List.of(SwingClassesAndResources.JAVA_BEANS_ICONS)).forEach(resources::produce);
+        }
     }
 
     // ---------------------------------------------------------------------------------------------- look and feel
