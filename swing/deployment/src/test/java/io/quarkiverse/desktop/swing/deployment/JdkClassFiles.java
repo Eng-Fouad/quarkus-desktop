@@ -187,6 +187,8 @@ final class JdkClassFiles implements Closeable {
             case "REFLECTIVE_FIELDS", "JNI_RUNTIME_ACCESS_FIELDS" -> hasField(MemberEntry.field(entry));
             case "RESOURCE_BUNDLES" -> hasBundle(entry);
             case "RESOURCE_GLOBS" -> hasGlob(entry);
+            // lookups expected to fail : no resource of the JDK matches
+            case "RESOURCE_LOOKUPS" -> !hasGlob(entry);
             default -> throw new IllegalArgumentException("Unknown list kind " + kind);
         };
     }

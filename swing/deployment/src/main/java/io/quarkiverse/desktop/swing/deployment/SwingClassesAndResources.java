@@ -1205,5 +1205,9 @@ public final class SwingClassesAndResources {
     };
 
     static String[] MAC_RESOURCE_LOOKUPS = {
+            // icons of the basic look and feel that Aqua does not override (html.pendingImage and html.missingImage of the
+            // HTML views) : SwingUtilities2.makeIcon looks them up in the package of AquaLookAndFeel first, which has no
+            // icons directory (the module glob belongs to java.desktop, the module of its parent directory)
+            "com/apple/laf/icons/*",
     };
 }
