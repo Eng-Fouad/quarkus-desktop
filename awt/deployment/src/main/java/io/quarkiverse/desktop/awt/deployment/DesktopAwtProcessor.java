@@ -827,17 +827,41 @@ class DesktopAwtProcessor {
         boolean fxLauncher = quarkusApplication.map(item -> QUARKUS_FX_APPLICATION.equals(item.getClassName()))
                 .orElse(false);
         if (!macos.parkMainThread() && !fxLauncher) {
-            LOGGER.warn("quarkus.desktop.awt.macos.park-main-thread=false : no thread runs the Cocoa event loop, an AWT or"
-                    + " Swing user interface hangs at its first window");
+            if (isPresent(QUARKUS_FX_APPLICATION, Thread.currentThread().getContextClassLoader())) {
+                // a @QuarkusMain of the application that delegates to QuarkusFxApplication, which then runs the Cocoa
+                // event loop on the first thread itself
+                LOGGER.debug("quarkus.desktop.awt.macos.park-main-thread=false with Quarkus FX : the first thread must call"
+                        + " QuarkusFxApplication.run");
+            } else {
+                LOGGER.warn("quarkus.desktop.awt.macos.park-main-thread=false : no thread runs the Cocoa event loop, an AWT"
+                        + " or Swing user interface hangs at its first window");
+            }
         }
         if (Stream.concat(nativeConfig.additionalBuildArgs().orElse(List.of()).stream(),
                 nativeConfig.additionalBuildArgsAppend().orElse(List.of()).stream())
-                .anyMatch(arg -> arg.contains("RunMainInNewThread"))) {
+                .anyMatch(DesktopAwtProcessor::isRunMainInNewThreadOption)) {
             LOGGER.warn("-H:+RunMainInNewThread moves main off the first thread of the process : an AWT or Swing user"
                     + " interface hangs on macOS");
         }
         if (macos.parkMainThread()) {
             checkQuarkusRun(Thread.currentThread().getContextClassLoader());
+        }
+    }
+
+    /**
+     * Whether a native image option moves {@code main} to a new thread : {@code -H:+RunMainInNewThread}, not
+     * {@code -H:-RunMainInNewThread}.
+     */
+    static boolean isRunMainInNewThreadOption(String option) {
+        return option.trim().startsWith("-H:+RunMainInNewThread");
+    }
+
+    private static boolean isPresent(String className, ClassLoader classLoader) {
+        try {
+            Class.forName(className, false, classLoader);
+            return true;
+        } catch (ClassNotFoundException | LinkageError e) {
+            return false;
         }
     }
 
