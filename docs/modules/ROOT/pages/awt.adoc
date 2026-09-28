@@ -342,8 +342,13 @@ files that Quarkus looks up at run time:
 ----
 
 The showcase (see xref:index.adoc#verification[Verification]) runs all its pages with exact metadata and no missing
-registration on Windows, Linux and macOS, in both of its variants, with its own application registrations in its
-`reachability-metadata.json`. GraalVM 25.0.0 note: with `-XX:MissingRegistrationReportingMode=Warn`, opening the URL of
+registration on Windows, Linux and macOS, in both of its variants (on Windows also with the GDI and OpenGL pipelines and
+at the scale of the display), with its own application registrations in its `reachability-metadata.json`. The
+integration tests of the extensions, which keep the default configuration (without the JavaBeans registration of the
+Swing classes), pass with exact metadata on Windows and Linux, with the application registrations of their
+`reachability-metadata.json`: the configuration files that Quarkus looks up, the persistence delegate of an enumeration
+value that `XMLEncoder` writes, and the URL stream handler providers that a URL created from a text looks up.
+GraalVM 25.0.0 note: with `-XX:MissingRegistrationReportingMode=Warn`, opening the URL of
 a resource that is not registered (for instance an image of an HTML page that does not exist) fails with a
 `ClassCastException` after the warning, instead of a `FileNotFoundException`: register such resources.
 
@@ -380,7 +385,9 @@ and a native executable built with exact metadata and run with `-XX:MissingRegis
 The integration tests of the extension build a native executable that shows a window with components and checks fonts,
 ImageIO plugins, print services and printing to a PostScript stream, data flavors, text attributes, Java Sound, the
 JavaBeans API, the desktop integration and the Java Access Bridge (Windows), on Windows, Linux and macOS (with the
-libraries and frameworks of the macOS executable, its main thread and the Metal pipeline). The https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] compares JVM mode and native
+libraries and frameworks of the macOS executable, its main thread and the Metal pipeline). They also pass when they are
+built with exact reachability metadata (`-Dquarkus.native.additional-build-args=--exact-reachability-metadata`, verified
+on Windows and Linux). The https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] compares JVM mode and native
 executables page by page (see xref:index.adoc#verification[Verification]).
 
 == Configuration

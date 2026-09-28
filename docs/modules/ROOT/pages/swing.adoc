@@ -280,8 +280,12 @@ With `--exact-reachability-metadata` (see xref:awt.adoc#exact-reachability-metad
 Swing extension registers the lookups of Swing expected to fail: the class names that Nimbus probes for the regions of its
 skin, `processInputMethodEvent` in the text components of the JDK and of the application that do not declare it, the
 `.properties` files next to the resource bundles of the look and feels, the icons of the look and feels that are looked up
-in the package of an application look and feel first, and the internal values of the Swing components that the
-JavaBeans API queries when it writes them (with their `BeanInfo`, `Customizer` and `PersistenceDelegate` probes).
+in the package of an application look and feel first (and those of the basic look and feel, looked up in the packages of
+Nimbus and Synth first), and the internal values of the Swing components that the JavaBeans API queries when it writes
+them (with their `BeanInfo`, `Customizer` and `PersistenceDelegate` probes). It also registers what the JavaBeans API
+queries without the JavaBeans registration of the Swing classes: the components whose properties a property transfer
+handler reads (`new TransferHandler("text")`, with the listener interfaces of their event sets), and the classes named
+in the Synth XML files of the application, whose constructors, methods and properties the Synth parser looks up.
 
 == Verification
 

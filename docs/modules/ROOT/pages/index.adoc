@@ -99,9 +99,10 @@ The https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showca
 3800 checks) that exercise the AWT, Java2D, text, image, Swing, look and feel, data transfer, desktop, printing,
 accessibility, JavaBeans and sound features of the JDK. Its tools run it in JVM mode and as a native executable, render
 every page to an image and compare the two runs pixel by pixel and check by check, also with exact reachability metadata
-(see xref:awt.adoc#exact-reachability-metadata[Exact reachability metadata]). On Windows, every page gives the same
-result in both runs, except the page that shows where a native executable legitimately differs (its known limitations,
-see xref:awt.adoc#limitations[Limitations]). It also has a Docker image for the Linux runs, and the steps to verify
+(see xref:awt.adoc#exact-reachability-metadata[Exact reachability metadata]). On Windows (with the Direct3D, GDI and
+OpenGL pipelines, and with exact reachability metadata), Linux and macOS, every page gives the same result in both runs,
+except the page that shows where a native executable legitimately differs (its known limitations, see
+xref:awt.adoc#limitations[Limitations]). It also has a Docker image for the Linux runs, and the steps to verify
 macOS on a Mac.
 
 [[configuration]]
