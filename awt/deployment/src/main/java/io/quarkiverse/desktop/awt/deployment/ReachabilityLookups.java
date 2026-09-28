@@ -170,20 +170,42 @@ public final class ReachabilityLookups {
     /**
      * The {@code .properties} files that {@code ResourceBundle} looks up next to the classes of the given bundles of the
      * JDK, for the locales without a class ({@code basic_en.properties}...) : in the module of the bundle and on the
-     * class path. The bundles that are properties files are skipped.
+     * class path. The bundles that are properties files are skipped. A bundle class that the JDK of the build does not
+     * have belongs to the module that has its directory, or a parent of it (see {@link #modules(String)}) : a Linux
+     * executable built in a container from a Windows or macOS host has the bundle of the GTK look and feel.
      */
     public static Set<String> bundlePropertiesGlobs(Collection<String> bundles) {
         Set<String> globs = new TreeSet<>();
         for (String bundle : bundles) {
+            String path = bundle.replace('.', '/');
+            String glob = path + "_*.properties";
             Optional<Class<?>> type = load(bundle);
-            if (type.isEmpty() || type.get().getModule().getName() == null) {
-                continue;
+            Set<String> modules;
+            if (type.isPresent()) {
+                String module = type.get().getModule().getName();
+                modules = module == null ? Set.of() : Set.of(module);
+            } else {
+                modules = isJdkResource(path + ".properties") ? Set.of() : modules(glob);
             }
-            String glob = bundle.replace('.', '/') + "_*.properties";
-            globs.add(glob);
-            globs.add(type.get().getModule().getName() + ":" + glob);
+            if (!modules.isEmpty()) {
+                globs.add(glob);
+                modules.forEach(module -> globs.add(module + ":" + glob));
+            }
         }
         return globs;
+    }
+
+    /**
+     * Whether a module of the JDK has the resource.
+     */
+    private static boolean isJdkResource(String path) {
+        FileSystem jrt = FileSystems.getFileSystem(URI.create("jrt:/"));
+        for (Module module : ModuleLayer.boot().modules()) {
+            if (Files.isRegularFile(jrt.getPath("/modules", module.getName(), path))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

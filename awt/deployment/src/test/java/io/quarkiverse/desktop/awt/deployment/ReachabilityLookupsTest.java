@@ -69,6 +69,17 @@ class ReachabilityLookupsTest {
                         "no/such/directory/*", "toplevel.properties")));
     }
 
+    /**
+     * A bundle of the Linux executables, whatever the JDK of the build : a Linux executable built in a container from a
+     * Windows or macOS host has the GTK look and feel, whose bundle class these JDKs do not have.
+     */
+    @Test
+    void bundleOfAnotherPlatform() {
+        assertEquals(Set.of("com/sun/java/swing/plaf/gtk/resources/gtk_*.properties",
+                "java.desktop:com/sun/java/swing/plaf/gtk/resources/gtk_*.properties"),
+                ReachabilityLookups.bundlePropertiesGlobs(List.of("com.sun.java.swing.plaf.gtk.resources.gtk")));
+    }
+
     @Test
     void javaBeansSerializedForms() {
         assertEquals(Set.of("java/awt/*.ser", "javax/swing/*.ser"),
