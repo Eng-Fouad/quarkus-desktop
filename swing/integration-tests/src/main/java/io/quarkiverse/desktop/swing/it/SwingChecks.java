@@ -90,6 +90,7 @@ import javax.swing.colorchooser.AbstractColorChooserPanel;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.plaf.basic.BasicFileChooserUI;
+import javax.swing.plaf.basic.BasicTextAreaUI;
 import javax.swing.plaf.metal.MetalLookAndFeel;
 import javax.swing.plaf.multi.MultiButtonUI;
 import javax.swing.plaf.synth.Region;
@@ -100,9 +101,12 @@ import javax.swing.plaf.synth.SynthStyle;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.text.DefaultFormatter;
 import javax.swing.text.Document;
+import javax.swing.text.Element;
 import javax.swing.text.MaskFormatter;
 import javax.swing.text.NumberFormatter;
 import javax.swing.text.PlainDocument;
+import javax.swing.text.PlainView;
+import javax.swing.text.View;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.rtf.RTFEditorKit;
@@ -210,6 +214,7 @@ public final class SwingChecks {
             check("print-text", this::printText);
             check("timer-worker", this::timerAndWorker);
             check("right-to-left", this::rightToLeft);
+            check("override-checks", this::overrideChecks);
             if (headless) {
                 skip("popup", "headless");
             } else {
@@ -1023,6 +1028,88 @@ public final class SwingChecks {
             require(!gallery.getComponentOrientation().isLeftToRight(), "not right to left");
             return "colors=" + distinctColors(image, new Rectangle(0, 0, image.getWidth(), image.getHeight()));
         });
+    }
+
+    // ------------------------------------------------------------------------------------------- override checks
+
+    /**
+     * Swing checks with reflection which methods of the application classes override its own : a plain text view that
+     * only overrides the {@code int} variant of {@code drawUnselectedText} (deprecated) is painted with it, and a text
+     * field that overrides {@code processInputMethodEvent} gets the committed text of an input method without the
+     * {@code KEY_TYPED} events that Swing synthesizes for the other text fields.
+     */
+    private String overrideChecks() throws Exception {
+        return onEdt(() -> {
+            IntVariantView.painted.set(0);
+            JTextArea area = new JTextArea("override");
+            area.setUI(new BasicTextAreaUI() {
+                @Override
+                public View create(Element element) {
+                    return new IntVariantView(element);
+                }
+            });
+            area.setSize(200, 40);
+            render(area);
+            require(IntVariantView.painted.get() > 0, "the int variant of drawUnselectedText was not used");
+            String plain = committedText(new PlainInputField());
+            String overriding = committedText(new InputMethodField());
+            require(plain.equals("text=ab keyTyped=2"), "PlainInputField " + plain);
+            require(overriding.equals("text=ab keyTyped=0"), "InputMethodField " + overriding);
+            return "view=int field=" + plain + " inputMethodField=" + overriding;
+        });
+    }
+
+    /**
+     * Commits "ab" with an input method event.
+     */
+    private static String committedText(JTextField field) {
+        AtomicInteger typed = new AtomicInteger();
+        field.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyTyped(java.awt.event.KeyEvent e) {
+                typed.incrementAndGet();
+            }
+        });
+        field.dispatchEvent(new java.awt.event.InputMethodEvent(field,
+                java.awt.event.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
+                new java.text.AttributedString("ab").getIterator(), 2, null, null));
+        return "text=" + field.getText() + " keyTyped=" + typed.get();
+    }
+
+    /**
+     * Overrides the {@code int} variant only : {@code PlainView} finds it with reflection and calls it.
+     */
+    static final class IntVariantView extends PlainView {
+
+        static final AtomicInteger painted = new AtomicInteger();
+
+        IntVariantView(Element element) {
+            super(element);
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        protected int drawUnselectedText(java.awt.Graphics g, int x, int y, int p0, int p1)
+                throws javax.swing.text.BadLocationException {
+            painted.incrementAndGet();
+            return super.drawUnselectedText(g, x, y, p0, p1);
+        }
+    }
+
+    /**
+     * A text field that does not handle the input method events itself.
+     */
+    static final class PlainInputField extends JTextField {
+    }
+
+    /**
+     * A text field that handles the input method events itself.
+     */
+    static final class InputMethodField extends JTextField {
+        @Override
+        protected void processInputMethodEvent(java.awt.event.InputMethodEvent e) {
+            super.processInputMethodEvent(e);
+        }
     }
 
     /**

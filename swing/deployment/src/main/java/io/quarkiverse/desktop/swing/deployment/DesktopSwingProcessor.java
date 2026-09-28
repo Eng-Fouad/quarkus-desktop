@@ -2,7 +2,6 @@ package io.quarkiverse.desktop.swing.deployment;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -150,8 +149,8 @@ class DesktopSwingProcessor {
     }
 
     /**
-     * The application classes that Swing creates by name or inspects with reflection (see
-     * {@link SwingApplicationClasses}).
+     * The application classes that Swing creates by name (see {@link SwingApplicationClasses}), and the icon lookups of
+     * the application look and feels.
      */
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void applicationClasses(CombinedIndexBuildItem combinedIndex,
@@ -168,17 +167,7 @@ class DesktopSwingProcessor {
         for (MethodInfo createUI : classes.createUIMethods.values()) {
             reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, createUI));
         }
-        if (!classes.queried.isEmpty()) {
-            // Swing only queries the methods, but Quarkus after 3.40 registers methods for invocation only
-            reflectiveClasses.produce(ReflectiveClassBuildItem.builder(classes.queried.toArray(String[]::new))
-                    .constructors(false).methods().reason(REASON).build());
-        }
-        for (Map.Entry<String, MethodInfo> handler : classes.inputMethodHandlers.entrySet()) {
-            // Swing only looks the method up, but Quarkus after 3.40 registers methods for invocation only
-            reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, handler.getValue()));
-        }
-        lookups.produce(new ReachabilityLookupsBuildItem(List.of(), classes.inputMethodLookups,
-                classes.lookAndFeelIconGlobs));
+        lookups.produce(new ReachabilityLookupsBuildItem(List.of(), List.of(), classes.lookAndFeelIconGlobs));
     }
 
     /**

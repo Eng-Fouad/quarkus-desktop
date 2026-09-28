@@ -9,8 +9,9 @@ import io.quarkus.builder.item.MultiBuildItem;
  * What the JDK desktop code looks up by name and may not find, for native executables built with
  * {@code --exact-reachability-metadata} : with exact metadata, a lookup that is not registered fails with a missing
  * registration error instead of returning "not found", even when "not found" is the expected answer (the JavaBeans API
- * looks for {@code <class>BeanInfo} classes that usually do not exist, {@code Component} checks whether a class declares
- * {@code coalesceEvents}, {@code ResourceBundle} looks for {@code .properties} files next to the bundle classes...).
+ * looks for {@code <class>BeanInfo} classes that usually do not exist, {@code JTextComponent} checks whether a text
+ * component declares {@code processInputMethodEvent}, {@code ResourceBundle} looks for {@code .properties} files next to
+ * the bundle classes...).
  * Registering these lookups makes them answer "not found" (or find what exists) in both modes.
  * <p>
  * The Desktop AWT extension writes the lookups of all these build items to a {@code reachability-metadata.json} file of

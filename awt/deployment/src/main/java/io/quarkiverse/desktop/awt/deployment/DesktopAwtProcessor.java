@@ -23,13 +23,13 @@ import java.util.stream.Stream;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
-import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
 
 import io.quarkiverse.desktop.awt.deployment.DesktopTargetPlatformBuildItem.Platform;
 import io.quarkiverse.desktop.awt.runtime.DesktopAwtConfig;
 import io.quarkiverse.desktop.awt.runtime.DesktopAwtRecorder;
 import io.quarkiverse.desktop.awt.runtime.graal.DesktopAwtFeature;
+import io.quarkiverse.desktop.awt.runtime.graal.OverrideChecksFeature;
 import io.quarkiverse.desktop.awt.runtime.macos.MacMainThread;
 import io.quarkiverse.desktop.awt.runtime.macos.ParkMainThreadEnabled;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
@@ -178,8 +178,6 @@ class DesktopAwtProcessor {
     static final String QUARKUS_FX_APPLICATION = "io.quarkiverse.fx.QuarkusFxApplication";
 
     private static final DotName COMPONENT = DotName.createSimple("java.awt.Component");
-    private static final DotName AWT_EVENT = DotName.createSimple("java.awt.AWTEvent");
-    private static final String COALESCE_EVENTS = "#coalesceEvents(java.awt.AWTEvent,java.awt.AWTEvent)";
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -488,36 +486,6 @@ class DesktopAwtProcessor {
                 AwtClassesAndResources.MAC_SERVICE_PROVIDERS)).methods().reason(REASON).build());
     }
 
-    /**
-     * AWT checks with reflection whether a component class overrides {@code coalesceEvents}
-     * ({@code Component.isCoalesceEventsOverriden}, for every class of the class loader of the application) : register
-     * the method of the application classes that declare it, and the lookup of the method in the other ones (for
-     * {@code --exact-reachability-metadata}).
-     */
-    @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
-    void coalesceEventsOverrides(CombinedIndexBuildItem combinedIndex,
-            BuildProducer<ReflectiveMethodBuildItem> reflectiveMethods,
-            BuildProducer<ReachabilityLookupsBuildItem> lookups) {
-        List<String> undeclared = new ArrayList<>();
-        for (ClassInfo classInfo : combinedIndex.getIndex().getKnownClasses()) {
-            if (classInfo.isInterface() || classInfo.superName() == null) {
-                continue;
-            }
-            MethodInfo method = classInfo.method("coalesceEvents", org.jboss.jandex.Type.create(AWT_EVENT,
-                    org.jboss.jandex.Type.Kind.CLASS),
-                    org.jboss.jandex.Type.create(AWT_EVENT, org.jboss.jandex.Type.Kind.CLASS));
-            if (!isComponent(classInfo.name(), combinedIndex.getIndex())) {
-                continue;
-            }
-            if (method != null) {
-                reflectiveMethods.produce(new ReflectiveMethodBuildItem(REASON, method));
-            } else {
-                undeclared.add(classInfo.name().toString() + COALESCE_EVENTS);
-            }
-        }
-        lookups.produce(new ReachabilityLookupsBuildItem(List.of(), undeclared, List.of()));
-    }
-
     // ------------------------------------------------------------------------------------ exact reachability metadata
 
     /**
@@ -687,6 +655,8 @@ class DesktopAwtProcessor {
             BuildProducer<NativeImageFeatureBuildItem> features,
             BuildProducer<NativeImageSystemPropertyBuildItem> builderProperties) {
         features.produce(new NativeImageFeatureBuildItem(DesktopAwtFeature.class));
+        // the methods of the application and library classes whose declaration AWT and Swing check with reflection
+        features.produce(new NativeImageFeatureBuildItem(OverrideChecksFeature.class));
         if (platform.isWindows() && config.windows().dpiAware()) {
             builderProperties.produce(new NativeImageSystemPropertyBuildItem(DesktopAwtFeature.DPI_AWARE, "true"));
         }

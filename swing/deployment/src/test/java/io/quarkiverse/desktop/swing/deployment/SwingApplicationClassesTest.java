@@ -85,11 +85,6 @@ class SwingApplicationClassesTest {
                 ApplicationLookAndFeel.class.getName(), ApplicationKit.class.getName(),
                 ApplicationPainter.class.getName()), classes.constructed);
         assertEquals(Set.of(RoundButtonUI.class.getName()), classes.createUIMethods.keySet());
-        assertEquals(Set.of(ApplicationView.class.getName()), classes.queried);
-        assertEquals(Set.of(InputMethodField.class.getName()), classes.inputMethodHandlers.keySet());
-        // the lookup of the method in the text components that do not declare it (exact reachability metadata)
-        assertEquals(Set.of(PlainField.class.getName() + "#processInputMethodEvent(java.awt.event.InputMethodEvent)"),
-                classes.inputMethodLookups);
         // the icons of the look and feels of the JDK are looked up in the package of the application look and feel first
         assertEquals(Set.of("io/quarkiverse/desktop/swing/deployment/icons/*"), classes.lookAndFeelIconGlobs);
     }

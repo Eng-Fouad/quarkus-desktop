@@ -895,8 +895,8 @@ public final class AwtClassesAndResources {
     // types whose members are queried, the lookups that the JDK expects to fail, the methods whose declaration it checks.
     // The processor adds the lookups computed from names : the JavaBeans probes of the classes registered for the
     // JavaBeans API (<class>BeanInfo, <class>Customizer, <class>PersistenceDelegate, <class>Editor...) with the
-    // supertypes of these classes, the coalesceEvents lookups of the application components, the resource bundles and
-    // resources of the JDK modules.
+    // supertypes of these classes, the resource bundles and resources of the JDK modules. The methods that AWT and Swing
+    // look up in the application and library classes (coalesceEvents...) are registered by OverrideChecksFeature.
 
     static String[] REFLECTIVE_TYPES = {
             // Java2D render buffers and the glyph cache of fonts access native memory with the Foreign Function and Memory

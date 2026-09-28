@@ -37,10 +37,12 @@ public interface DesktopAwtConfig {
      * The registered lookups are those of the JDK expected to fail (the {@code BeanInfo}, {@code Customizer},
      * {@code PersistenceDelegate} and {@code Editor} classes that the JavaBeans API probes for the JDK classes that the
      * extensions register for it, the region names that Nimbus probes, the {@code .properties} files next to the resource
-     * bundles of the JDK, the {@code META-INF/services} files of the desktop services, the {@code coalesceEvents} and
-     * {@code processInputMethodEvent} methods that the application components and text components do not declare...),
-     * the types whose members the JavaBeans API queries, and the var handles of the native memory accesses of Java2D and
-     * fonts. They make a native executable about 0.3 MB larger, and are useless without exact reachability metadata.
+     * bundles of the JDK, the {@code META-INF/services} files of the desktop services, the {@code processInputMethodEvent}
+     * methods that the text components of the JDK do not declare...), the types whose members the JavaBeans API queries,
+     * and the var handles of the native memory accesses of Java2D and fonts. They make a native executable about 0.3 MB
+     * larger, and are useless without exact reachability metadata. The methods that AWT and Swing look up in the classes
+     * of the application and of its libraries ({@code coalesceEvents} in the components...) are registered for every
+     * native executable, declared or not.
      * <p>
      * By default, they are registered when {@code quarkus.native.additional-build-args} or
      * {@code quarkus.native.additional-build-args-append} contains {@code --exact-reachability-metadata} (or

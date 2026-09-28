@@ -34,10 +34,13 @@ their `valueOf(String)` methods that editable combo boxes use.
 * The Synth XML support: the color types of the XML files (the beans decoder that creates the objects of the XML files
 comes with `quarkus-desktop-awt`, for `XMLDecoder`).
 * Optionally, the bean properties of the Swing classes, for the JavaBeans API (see <<java-beans>>).
-* The *application classes* that Swing creates by name or inspects with reflection, found in the Jandex index: UI
-delegates (`ComponentUI` subclasses, with their static `createUI` method), look and feels (`LookAndFeel` subclasses),
-editor kits (`EditorKit` subclasses), Synth painters (`SynthPainter` subclasses), plain text views (`PlainView`
-subclasses, whose overridden drawing methods Swing looks up) and text components that handle input method events.
+* The *application classes* that Swing creates by name, found in the Jandex index: UI delegates (`ComponentUI`
+subclasses, with their static `createUI` method), look and feels (`LookAndFeel` subclasses), editor kits (`EditorKit`
+subclasses) and Synth painters (`SynthPainter` subclasses).
+* The methods that Swing looks up with reflection in the classes of the application and of its libraries, for every
+class that the native image analysis reaches (in the Jandex index or not): the drawing methods of the plain text views
+(`PlainView` subclasses) and `processInputMethodEvent` in the text components (the Desktop AWT extension registers them,
+with `coalesceEvents` in the components).
 * The classes named in the Synth XML files of the application (`<object class="...">`).
 * The look and feel class set with `quarkus.desktop.swing.look-and-feel`, when it is a class name.
 
@@ -278,7 +281,8 @@ xref:awt.adoc#limitations[Limitations]).
 
 With `--exact-reachability-metadata` (see xref:awt.adoc#exact-reachability-metadata[Exact reachability metadata]), the
 Swing extension registers the lookups of Swing expected to fail: the class names that Nimbus probes for the regions of its
-skin, `processInputMethodEvent` in the text components of the JDK and of the application that do not declare it, the
+skin, `processInputMethodEvent` in the text components of the JDK that do not declare it (and in those of the
+application and of its libraries, see <<_how_it_works>>), the
 `.properties` files next to the resource bundles of the look and feels, the icons of the look and feels that are looked up
 in the package of an application look and feel first (and those of the basic look and feel, looked up in the packages of
 Nimbus and Synth first), and the internal values of the Swing components that the JavaBeans API queries when it writes

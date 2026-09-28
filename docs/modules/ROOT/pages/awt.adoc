@@ -309,8 +309,11 @@ an application can use exact metadata:
 * the lookups of the JDK desktop code expected to fail, for the features that the extensions support, and the JavaBeans
 probes of the JDK classes that they register for the JavaBeans API (with their supertypes, whose members the JavaBeans
 API queries);
-* for the application, the lookups computed from its classes (the Jandex index): `coalesceEvents` for its components,
-`processInputMethodEvent` for its text components, the icons of its look and feels;
+* for the application, the icons of its look and feels (computed from its classes in the Jandex index);
+* for every class of the application and of its libraries that the native image analysis reaches, whether it is in the
+Jandex index or not, the methods whose declaration AWT and Swing check with reflection: `coalesceEvents` in the
+components, `processInputMethodEvent` in the text components, the drawing methods of the plain text views (registered
+without exact metadata too: a library component and the application classes that extend it work as in JVM mode);
 * the var handles that Java2D and the fonts use to access native memory (Foreign Function and Memory API).
 
 These registrations are added when `quarkus.native.additional-build-args` or `quarkus.native.additional-build-args-append`
