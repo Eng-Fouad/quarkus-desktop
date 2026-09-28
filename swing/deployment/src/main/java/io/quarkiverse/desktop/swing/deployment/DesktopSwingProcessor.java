@@ -225,11 +225,15 @@ class DesktopSwingProcessor {
     }
 
     /**
-     * The classes named in the Synth XML files of the application, created by the beans decoder of Synth.
+     * The classes named in the Synth XML files of the application, created by the beans decoder of Synth. For
+     * {@code --exact-reachability-metadata}, also the lookups of the decoder : it queries their public constructors and
+     * methods ({@code ConstructorFinder}, {@code MethodFinder}) and introspects them for their properties
+     * ({@code <void property="...">}).
      */
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
     void synthXmlClasses(ApplicationArchivesBuildItem applicationArchives,
-            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses) {
+            BuildProducer<ReflectiveClassBuildItem> reflectiveClasses,
+            BuildProducer<ReachabilityLookupsBuildItem> lookups) {
         Set<String> classes = new TreeSet<>();
         for (ApplicationArchive archive : applicationArchives.getAllApplicationArchives()) {
             archive.accept(tree -> tree.walk(visit -> {
@@ -254,6 +258,8 @@ class DesktopSwingProcessor {
         if (!existing.isEmpty()) {
             reflectiveClasses.produce(ReflectiveClassBuildItem.builder(existing.toArray(String[]::new)).methods()
                     .fields().reason(REASON).build());
+            lookups.produce(new ReachabilityLookupsBuildItem(ReachabilityLookups.javaBeansTypes(existing), List.of(),
+                    List.of()));
         }
     }
 

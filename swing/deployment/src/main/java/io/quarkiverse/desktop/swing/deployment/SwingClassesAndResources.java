@@ -856,6 +856,34 @@ public final class SwingClassesAndResources {
     // Desktop AWT extension, which also computes the lookups that depend on names).
 
     static String[] REFLECTIVE_TYPES = {
+            // bean properties (new TransferHandler("text")...) : the Introspector reads the class of the component (the
+            // components of the transferred properties of REFLECTIVE_METHODS) : its BeanInfo and Customizer probes, and
+            // the members of its supertypes and of the listener interfaces of its event sets
+            "javax.swing.JButton",
+            "javax.swing.JCheckBox",
+            "javax.swing.JCheckBoxMenuItem",
+            "javax.swing.JColorChooser",
+            "javax.swing.JComboBox",
+            "javax.swing.JEditorPane",
+            "javax.swing.JFormattedTextField",
+            "javax.swing.JLabel",
+            "javax.swing.JList",
+            "javax.swing.JMenu",
+            "javax.swing.JMenuItem",
+            "javax.swing.JPasswordField",
+            "javax.swing.JProgressBar",
+            "javax.swing.JRadioButton",
+            "javax.swing.JRadioButtonMenuItem",
+            "javax.swing.JScrollBar",
+            "javax.swing.JSlider",
+            "javax.swing.JSpinner",
+            "javax.swing.JTabbedPane",
+            "javax.swing.JTextArea",
+            "javax.swing.JTextField",
+            "javax.swing.JTextPane",
+            "javax.swing.JToggleButton",
+            "javax.swing.JToolTip",
+
             // JavaBeans : the internal values of the Swing components that XMLEncoder meets (layouts, borders, renderers,
             // transfer handlers, key maps of the basic and Metal look and feels), and the interfaces of the components
             "javax.swing.JRootPane$1",
@@ -1101,15 +1129,18 @@ public final class SwingClassesAndResources {
     // lookup of a resource that is not registered fails there, instead of finding nothing).
 
     static String[] RESOURCE_LOOKUPS = {
+            // icons of the basic look and feel (html.pendingImage and html.missingImage of the HTML views, option pane,
+            // file chooser...) : SwingUtilities2.makeIcon looks them up in the package of each look and feel class first,
+            // up to BasicLookAndFeel. Nimbus and Synth have no icons ; the GTK look and feel (Linux) resolves the defaults
+            // of Synth through UIManager too
+            "javax/swing/plaf/nimbus/icons/*",
+            "javax/swing/plaf/synth/icons/*",
     };
 
     static String[] WINDOWS_RESOURCE_LOOKUPS = {
     };
 
     static String[] LINUX_RESOURCE_LOOKUPS = {
-            // GTK look and feel : GTKStyle.get resolves defaults of the Synth look and feel through UIManager, icons that
-            // the JDK does not have (option pane, file chooser, the Java cup of the internal frames)
-            "javax/swing/plaf/synth/icons/*",
     };
 
     // ----------------------------------------------------------------------------------------------------------- macOS

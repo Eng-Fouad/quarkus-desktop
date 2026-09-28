@@ -28,6 +28,12 @@ class ReachabilityLookupsTest {
                 "javax.accessibility.Accessible")) {
             assertTrue(types.contains(type), type);
         }
+        // the listener interfaces of the event sets (of the class and of its superclasses), with their supertypes
+        for (String type : List.of("java.awt.event.ActionListener", "java.awt.event.ComponentListener",
+                "java.awt.event.HierarchyBoundsListener", "java.beans.PropertyChangeListener", "java.util.EventListener")) {
+            assertTrue(types.contains(type), type);
+        }
+        assertFalse(types.contains("java.awt.event.ActionListenerBeanInfo"));
         // the classes that exist are not lookups expected to fail
         assertFalse(types.contains("com.sun.beans.infos.ComponentBeanInfo"));
         assertFalse(types.contains("java.beans.MetaData$java_awt_Component_PersistenceDelegate"));

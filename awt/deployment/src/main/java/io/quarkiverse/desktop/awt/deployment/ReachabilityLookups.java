@@ -2,13 +2,17 @@ package io.quarkiverse.desktop.awt.deployment;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
+import java.util.EventListener;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -46,8 +50,9 @@ public final class ReachabilityLookups {
      * The lookups of the JavaBeans API for the given classes and their superclasses : the classes it looks up by name
      * and that do not exist in the JDK ({@code java.awt.ButtonBeanInfo}, {@code java.awt.ButtonCustomizer},
      * {@code java.awt.ButtonPersistenceDelegate}, {@code java.beans.MetaData$java_awt_Button_PersistenceDelegate},
-     * {@code java.awt.ButtonEditor}, {@code com.sun.beans.editors.ButtonEditor}), and the supertypes (superclasses and
-     * interfaces) whose members it queries.
+     * {@code java.awt.ButtonEditor}, {@code com.sun.beans.editors.ButtonEditor}), and the types whose members it
+     * queries : the supertypes (superclasses and interfaces), and the listener interfaces of the event sets
+     * ({@code addActionListener(ActionListener)}) with their own supertypes.
      *
      * @return binary names of classes, sorted
      */
@@ -70,6 +75,7 @@ public final class ReachabilityLookups {
                     supertypes.push(current.getSuperclass());
                 }
                 supertypes.addAll(List.of(current.getInterfaces()));
+                supertypes.addAll(eventSetListenerTypes(current));
             }
         }
         for (Class<?> type : seen) {
@@ -77,7 +83,7 @@ public final class ReachabilityLookups {
                 continue;
             }
             String name = type.getName();
-            List<String> candidates = new java.util.ArrayList<>();
+            List<String> candidates = new ArrayList<>();
             for (String suffix : JAVA_BEANS_SUFFIXES) {
                 candidates.add(name + suffix);
             }
@@ -90,6 +96,32 @@ public final class ReachabilityLookups {
             }
         }
         return types;
+    }
+
+    /**
+     * The listener interfaces of the event sets that the {@code Introspector} finds in the public methods that a class
+     * declares : {@code add<Name>Listener} with one parameter, a listener interface (it queries their methods).
+     */
+    private static List<Class<?>> eventSetListenerTypes(Class<?> type) {
+        List<Class<?>> listeners = new ArrayList<>();
+        Method[] methods;
+        try {
+            methods = type.getDeclaredMethods();
+        } catch (LinkageError e) {
+            // a parameter type missing from the class path of the build
+            return listeners;
+        }
+        for (Method method : methods) {
+            if (Modifier.isPublic(method.getModifiers()) && !method.isSynthetic()
+                    && method.getName().startsWith("add") && method.getName().endsWith("Listener")
+                    && method.getParameterCount() == 1) {
+                Class<?> parameter = method.getParameterTypes()[0];
+                if (parameter.isInterface() && EventListener.class.isAssignableFrom(parameter)) {
+                    listeners.add(parameter);
+                }
+            }
+        }
+        return listeners;
     }
 
     /**
