@@ -168,8 +168,12 @@ extension keeps that thread for the Cocoa event loop and runs the Quarkus applic
 (see `quarkus.desktop.awt.macos.park-main-thread`). The first thread is named `Cocoa Run Loop`, then `AppKit Thread`
 once AWT started AppKit on it, and the `io.quarkiverse.desktop.main-thread-parked` system property is `true`. In a
 `@QuarkusMain` class with its own `main` method, do not use AWT before calling `Quarkus.run` (`EventQueue.invokeLater`
-is fine, `EventQueue.invokeAndWait` is not). A native build with `-H:+RunMainInNewThread` cannot show a user interface:
-the build logs a warning.
+is fine, `EventQueue.invokeAndWait` is not). `Quarkus.run` never returns there: the first thread stays in the Cocoa
+event loop, and the process exits when the application ends, as with the `java` launcher (with an exit handler that
+does not exit, once the other non daemon threads end). Code after `Quarkus.run` in `main` does not run (it does in JVM
+mode, and on Windows and Linux): keep the default exit handler, and do that work in `QuarkusApplication.run` or when
+the application stops (`@Observes ShutdownEvent`). A native build with `-H:+RunMainInNewThread` cannot show a user
+interface: the build logs a warning.
 
 AWT components are drawn by the Swing Aqua look and feel on macOS: AWT applications do not need `quarkus-desktop-swing`
 for it. The name of the application in the menu bar is `quarkus.application.name` (see
