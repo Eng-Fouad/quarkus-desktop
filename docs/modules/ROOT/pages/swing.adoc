@@ -6,12 +6,12 @@ include::./includes/attributes.adoc[]
 
 The `quarkus-desktop-swing` extension makes Swing applications work in JVM mode and as GraalVM native executables: all
 the components, all the look and feels of the JDK (Metal with its themes, Nimbus, Synth, Windows and Windows Classic,
-GTK, CDE/Motif, and the multiplexing look and feel), text (HTML, RTF, styled text), formatters and editors, the file and
-color choosers, option panes, internal frames, data transfer, printing, and application look and feels and UI
+GTK, Aqua, CDE/Motif, and the multiplexing look and feel), text (HTML, RTF, styled text), formatters and editors, the
+file and color choosers, option panes, internal frames, data transfer, printing, and application look and feels and UI
 delegates.
 
 It includes `quarkus-desktop-awt`: see xref:awt.adoc[Desktop AWT] for what AWT applications need (windows, fonts, native
-executables on Windows and Linux, HiDPI displays...). Everything written there applies to Swing applications.
+executables on Windows, Linux and macOS, HiDPI displays...). Everything written there applies to Swing applications.
 
 == How it works
 
@@ -20,8 +20,8 @@ In JVM mode, Swing needs nothing special. The extension sets the configured look
 
 Swing creates many of its classes by name, with reflection: the look and feels and their UI delegates, the Nimbus
 painters, the key bindings, the editor kits, the values that formatters and table editors parse... For native
-executables, the extension registers what the JDK needs on the platform of the executable (Windows or Linux), and what
-the application needs:
+executables, the extension registers what the JDK needs on the platform of the executable (Windows, Linux or macOS),
+and what the application needs:
 
 * The look and feels of the JDK, their UI delegates, painters, lazy values, icons, sounds and resource bundles.
 * Text: the HTML and RTF editor kits, the RTF charsets, the page content types (`JEditorPane.setPage`).
@@ -249,7 +249,8 @@ without it). Applications that only use the JavaBeans API with their own classes
 
 `JTable.print`, `JTextComponent.print` (text, HTML, RTF) and the `Printable` objects of `JTable.getPrintable` and
 `JTextComponent.getPrintable` print as in JVM mode, to printers or to a `StreamPrintService` (PostScript). The print
-and page dialogs are the ones of AWT: native dialogs on Windows, Swing dialogs (`ServiceDialog`) on Linux.
+and page dialogs are the ones of AWT: native dialogs on Windows, the Cocoa print and page layout panels on macOS, Swing
+dialogs (`ServiceDialog`) on Linux.
 
 == Locales
 
@@ -295,8 +296,8 @@ in the Synth XML files of the application, whose constructors, methods and prope
 == Verification
 
 The integration tests of the extension run a gallery of the components with every look and feel of the platform (in JVM
-mode and as a native executable, on Windows and on Linux), and check that the native executable gets the same look and
-feel defaults (UI delegates, icons, painters, borders, colors, fonts, texts), the same key bindings, the same font
+mode and as a native executable, on Windows, Linux and macOS), and check that the native executable gets the same look
+and feel defaults (UI delegates, icons, painters, borders, colors, fonts, texts), the same key bindings, the same font
 metrics, the same rendering (pixel by pixel) and the same PostScript output as JVM mode. The
 https://github.com/Eng-Fouad/quarkus-desktop-showcase[Quarkus Desktop showcase] compares JVM mode and native executables
 page by page, with its Swing components, containers, text, look and feel, data transfer, printing and JavaBeans pages

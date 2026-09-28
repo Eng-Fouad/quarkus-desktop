@@ -5,7 +5,7 @@ include::./includes/attributes.adoc[]
 :categories: miscellaneous
 
 The `quarkus-desktop-awt` extension makes AWT GUI applications work in JVM mode and as GraalVM native executables:
-windows and the native AWT components, Java2D (including the Direct3D, GDI, XRender and OpenGL pipelines), fonts,
+windows and the native AWT components, Java2D (including the Direct3D, GDI, XRender, Metal and OpenGL pipelines), fonts,
 images, printing, clipboard and drag and drop, input methods, the desktop integration (`Desktop`, `Taskbar`,
 `SystemTray`), `Robot`, Java Sound and accessibility.
 

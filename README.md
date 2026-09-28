@@ -17,7 +17,7 @@ Quarkus from it) and GraalVM 25.1 or later.
 | Extension | Coordinates | Description |
 |---|---|---|
 | Desktop AWT | `io.quarkiverse.desktop:quarkus-desktop-awt` | AWT windows, Java2D, fonts, images, printing, clipboard, drag and drop |
-| Desktop Swing | `io.quarkiverse.desktop:quarkus-desktop-swing` | Swing components, the look and feels of the JDK (Metal, Nimbus, Synth, Windows, GTK, Motif), text, printing (includes Desktop AWT) |
+| Desktop Swing | `io.quarkiverse.desktop:quarkus-desktop-swing` | Swing components, the look and feels of the JDK (Metal, Nimbus, Synth, Windows, GTK, Aqua, Motif), text, printing (includes Desktop AWT) |
 
 Please refer to the documentation available at https://docs.quarkiverse.io/quarkus-desktop/dev/index.html
 (in this repository: [docs/modules/ROOT/pages](docs/modules/ROOT/pages)): installation, supported platforms, every
