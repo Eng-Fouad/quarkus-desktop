@@ -69,7 +69,7 @@ The look and feel set when the application starts, before it runs (on the event 
 
 `system` (the look and feel of the platform : Windows on Windows, Aqua on macOS, GTK on a GNOME desktop, Metal otherwise), `cross-platform` (Metal), `metal`, `nimbus`, `motif`, `windows`, `windows-classic`, `gtk`, or the class name of a look and feel (an application look and feel, or a library one such as FlatLaf). When not set, Swing uses its default look and feel (Aqua on macOS, Metal elsewhere, unless the `swing.defaultlaf` system property sets another one), and the application can set the look and feel itself with `UIManager.setLookAndFeel`.
 
-A look and feel that this platform does not support (for instance `windows` on Linux) or that cannot be created is reported as a warning, and the default look and feel is kept. The look and feel classes of the JDK are always included in native executables; an application look and feel class is registered for reflection when it is in the Jandex index of the application, or when this property names it at build time.
+A look and feel that this platform does not support (for instance `windows` on Linux) or that cannot be created is reported as a warning, and the default look and feel is kept. The look and feel classes of the JDK are included in native executables as `quarkus.desktop.swing.included-look-and-feels` configures them (all of them by default ; the build warns when this property names one that is not included) ; an application look and feel class is registered for reflection when it is in the Jandex index of the application, or when this property names it at build time.
 
 
 ifdef::add-copy-button-to-env-var[]

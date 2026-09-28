@@ -27,8 +27,10 @@ public interface DesktopSwingConfig {
      * <p>
      * A look and feel that this platform does not support (for instance {@code windows} on Linux) or that cannot be
      * created is reported as a warning, and the default look and feel is kept. The look and feel classes of the JDK are
-     * always included in native executables; an application look and feel class is registered for reflection when it is
-     * in the Jandex index of the application, or when this property names it at build time.
+     * included in native executables as {@code quarkus.desktop.swing.included-look-and-feels} configures them (all of
+     * them by default ; the build warns when this property names one that is not included) ; an application look and
+     * feel class is registered for reflection when it is in the Jandex index of the application, or when this property
+     * names it at build time.
      */
     Optional<String> lookAndFeel();
 }
