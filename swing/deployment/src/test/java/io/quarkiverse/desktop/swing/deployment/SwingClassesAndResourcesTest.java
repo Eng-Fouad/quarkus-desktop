@@ -54,6 +54,7 @@ class SwingClassesAndResourcesTest {
             Map.entry("RUNTIME_INITIALIZED_PACKAGES", NAME_ENTRY),
             Map.entry("RUNTIME_INITIALIZED_CLASSES", NAME_ENTRY),
             Map.entry("REFLECTIVE_CLASSES", TYPE_ENTRY),
+            Map.entry("REFLECTIVE_FIELD_CLASSES", NAME_ENTRY),
             Map.entry("REFLECTIVE_CONSTRUCTORS", TYPE_ENTRY),
             Map.entry("REFLECTIVE_METHODS", METHOD_ENTRY),
             Map.entry("REFLECTIVE_FIELDS", FIELD_ENTRY),
@@ -246,7 +247,8 @@ class SwingClassesAndResourcesTest {
      */
     private static void assertEntriesExist(String platform) throws IllegalAccessException {
         List<String> errors = new ArrayList<>();
-        for (String kind : List.of("REFLECTIVE_CLASSES", "REFLECTIVE_CONSTRUCTORS", "REFLECTIVE_TYPES",
+        for (String kind : List.of("REFLECTIVE_CLASSES", "REFLECTIVE_FIELD_CLASSES", "REFLECTIVE_CONSTRUCTORS",
+                "REFLECTIVE_TYPES",
                 "JNI_RUNTIME_ACCESS_CLASSES",
                 "RUNTIME_INITIALIZED_CLASSES", "SERVICE_PROVIDERS", "RESOURCE_BUNDLES")) {
             for (String entry : entries(kind, platform)) {

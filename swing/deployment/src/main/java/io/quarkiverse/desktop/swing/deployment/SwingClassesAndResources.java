@@ -32,6 +32,8 @@ import io.quarkiverse.desktop.awt.deployment.AwtClassesAndResources;
  * <li>{@code RUNTIME_INITIALIZED_CLASSES} : classes initialized at run time.</li>
  * <li>{@code REFLECTIVE_CLASSES} : classes registered for reflection with all their constructors, methods and
  * fields.</li>
+ * <li>{@code REFLECTIVE_FIELD_CLASSES} : classes registered for reflection with their fields only (constants that Swing
+ * reads by name).</li>
  * <li>{@code REFLECTIVE_CONSTRUCTORS} : classes registered for reflection with their constructors (also used for
  * classes that are only looked up by name; array classes are allowed).</li>
  * <li>{@code REFLECTIVE_METHODS} : single methods registered for reflection, {@code "fqcn#name(paramType,...)"}.</li>
@@ -101,9 +103,18 @@ public final class SwingClassesAndResources {
     // ------------------------------------------------------------------------------------------------------ reflection
 
     static String[] REFLECTIVE_CLASSES = {
+    };
+
+    static String[] WINDOWS_REFLECTIVE_CLASSES = {
+    };
+
+    static String[] LINUX_REFLECTIVE_CLASSES = {
+    };
+
+    static String[] REFLECTIVE_FIELD_CLASSES = {
             // bean properties (TransferHandler) : the Introspector reads the constants of the enumerated properties of the
-            // components (@BeanProperty(enumerationValues = "SwingConstants.LEFT")) ; GraalVM 25.3 fails the introspection
-            // when one of them is not registered
+            // components (@BeanProperty(enumerationValues = "SwingConstants.LEFT") : PropertyInfo reads them with
+            // Class.getField and Field.get) ; GraalVM 25.3 fails the introspection when one of them is not registered
             "java.awt.Adjustable",
             "javax.swing.DebugGraphics",
             "javax.swing.JDesktopPane",
@@ -120,14 +131,15 @@ public final class SwingClassesAndResources {
             "javax.swing.SwingConstants",
             "javax.swing.WindowConstants",
 
-            // Synth : color types of the XML files, by name (<color type="TEXT_FOREGROUND">)
+            // Synth : color types of the XML files, by name (<color type="TEXT_FOREGROUND"> : SynthParser reads the
+            // ColorType field)
             "javax.swing.plaf.synth.ColorType",
     };
 
-    static String[] WINDOWS_REFLECTIVE_CLASSES = {
+    static String[] WINDOWS_REFLECTIVE_FIELD_CLASSES = {
     };
 
-    static String[] LINUX_REFLECTIVE_CLASSES = {
+    static String[] LINUX_REFLECTIVE_FIELD_CLASSES = {
     };
 
     static String[] REFLECTIVE_CONSTRUCTORS = {
@@ -1154,6 +1166,9 @@ public final class SwingClassesAndResources {
     };
 
     static String[] MAC_REFLECTIVE_CLASSES = {
+    };
+
+    static String[] MAC_REFLECTIVE_FIELD_CLASSES = {
     };
 
     static String[] MAC_REFLECTIVE_CONSTRUCTORS = {

@@ -91,6 +91,12 @@ class DesktopSwingProcessor {
                 SwingClassesAndResources.LINUX_REFLECTIVE_CLASSES,
                 SwingClassesAndResources.MAC_REFLECTIVE_CLASSES)).methods().fields().reason(REASON).build());
         reflectiveClasses.produce(ReflectiveClassBuildItem.builder(entries(platform, config,
+                SwingClassesAndResources.REFLECTIVE_FIELD_CLASSES,
+                SwingClassesAndResources.WINDOWS_REFLECTIVE_FIELD_CLASSES,
+                SwingClassesAndResources.LINUX_REFLECTIVE_FIELD_CLASSES,
+                SwingClassesAndResources.MAC_REFLECTIVE_FIELD_CLASSES)).constructors(false).fields().reason(REASON)
+                .build());
+        reflectiveClasses.produce(ReflectiveClassBuildItem.builder(entries(platform, config,
                 SwingClassesAndResources.REFLECTIVE_CONSTRUCTORS,
                 SwingClassesAndResources.WINDOWS_REFLECTIVE_CONSTRUCTORS,
                 SwingClassesAndResources.LINUX_REFLECTIVE_CONSTRUCTORS,

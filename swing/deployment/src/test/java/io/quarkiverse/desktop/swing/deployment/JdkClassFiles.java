@@ -175,7 +175,7 @@ final class JdkClassFiles implements Closeable {
     private boolean exists(String kind, String entry) throws IOException {
         return switch (kind) {
             case "RUNTIME_INITIALIZED_PACKAGES" -> hasPackage(entry);
-            case "RUNTIME_INITIALIZED_CLASSES", "REFLECTIVE_CLASSES", "REFLECTIVE_CONSTRUCTORS",
+            case "RUNTIME_INITIALIZED_CLASSES", "REFLECTIVE_CLASSES", "REFLECTIVE_FIELD_CLASSES", "REFLECTIVE_CONSTRUCTORS",
                     "REFLECTIVE_PUBLIC_MEMBERS", "JAVA_BEANS_CLASSES", "REFLECTIVE_TYPES", "JNI_RUNTIME_ACCESS_CLASSES",
                     "SERVICE_PROVIDERS" ->
                 hasType(entry);
