@@ -41,12 +41,15 @@ final class DesktopStaticInitializerScanner {
     private static final String CLINIT = "<clinit>()V";
 
     /**
-     * Internal name prefixes of the packages of the JDK desktop modules.
+     * Internal name prefixes of the packages of the JDK desktop modules : the packages initialized at run time by the
+     * extension ({@code RUNTIME_INITIALIZED_PACKAGES} of {@link AwtClassesAndResources}) and by {@code quarkus-awt}.
      */
     static final List<String> DESKTOP_PACKAGES = List.of("java/awt/", "javax/swing/", "sun/awt/", "sun/java2d/",
             "sun/font/", "javax/imageio/", "com/sun/imageio/", "javax/print/", "sun/print/", "javax/sound/",
-            "com/sun/media/sound/", "javax/accessibility/", "com/sun/java/accessibility/", "sun/swing/",
-            "com/sun/java/swing/", "jdk/swing/interop/",
+            "com/sun/media/sound/", "javax/accessibility/", "com/sun/accessibility/", "com/sun/java/accessibility/",
+            "sun/swing/", "com/sun/swing/", "com/sun/java/swing/", "jdk/swing/interop/", "sun/datatransfer/",
+            // applets (deprecated, still in java.desktop : Applet.newAudioClip, an Applet is an AWT Panel)
+            "java/applet/",
             // macOS : the toolkit, the Aqua look and feel, the application events, the dock and the screen menu bar
             "sun/lwawt/", "com/apple/", "apple/laf/");
 
