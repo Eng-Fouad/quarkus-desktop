@@ -43,9 +43,9 @@ subclasses, whose overridden drawing methods Swing looks up) and text components
 
 The parts of Swing that AWT itself uses (print dialogs, input method windows, the text components of AWT on Linux)
 come with `quarkus-desktop-awt`: the run time initialization of the Swing packages, the basic and Metal UI delegates and
-their key bindings, the basic and Metal icons, HTML text. A Swing application class whose static initializer creates
-Swing objects (`static final Border`, `static final Icon`, `static final Color`...) is initialized at run time, as in JVM
-mode.
+their key bindings, the basic and Metal icons, HTML text. A class of the application or of a library (a component
+library such as SwingX, JFreeChart or RSyntaxTextArea) whose static initializer creates Swing objects
+(`static final Border`, `static final Icon`, `static final Color`...) is initialized at run time, as in JVM mode.
 
 == Writing a Swing application
 

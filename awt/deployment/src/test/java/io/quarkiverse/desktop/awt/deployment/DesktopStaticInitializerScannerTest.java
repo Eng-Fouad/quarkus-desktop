@@ -1,19 +1,28 @@
 package io.quarkiverse.desktop.awt.deployment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.awt.Color;
 import java.awt.Font;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 
 import org.jboss.jandex.Index;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import io.quarkus.paths.PathTree;
 
 class DesktopStaticInitializerScannerTest {
 
@@ -95,6 +104,32 @@ class DesktopStaticInitializerScannerTest {
                 .newAudioClip(AppletAudioClip.class.getResource("click.wav"));
     }
 
+    // A library that is not in the index : its classes are read from its jars
+
+    static class LibraryFactory {
+        static Object create() {
+            return new Color(0x336699);
+        }
+    }
+
+    static class LibraryDefaults {
+        static final Object BACKGROUND = new Color(0xeeeeee);
+    }
+
+    static class LibraryName {
+        static final String NAME = "library";
+    }
+
+    /**
+     * No desktop type in its class file : only through a class of another jar.
+     */
+    static class LibraryTheme {
+        static final Object DEFAULT = LibraryFactory.create();
+    }
+
+    @TempDir
+    Path directory;
+
     @Test
     void detectsClassesCreatingDesktopObjectsInStaticInitializers() throws IOException {
         Index index = Index.of(ConstantColor.class, ConstantFont.class, SwingBorder.class, InstanceUseOnly.class,
@@ -115,6 +150,46 @@ class DesktopStaticInitializerScannerTest {
                 SubclassOfDesktopUser.class.getName(),
                 TriggersDesktopUserInitialization.class.getName(),
                 AppletAudioClip.class.getName()), classes);
+    }
+
+    @Test
+    void scansTheLibrariesOutsideTheIndex() throws IOException {
+        Path first = jar("first.jar", LibraryTheme.class, LibraryName.class);
+        Path second = jar("second.jar", LibraryFactory.class, LibraryDefaults.class);
+
+        Set<String> classes = DesktopStaticInitializerScanner.scan(DesktopStaticInitializerScanner.classFiles(
+                List.of(PathTree.ofArchive(first), PathTree.ofArchive(second)), List.of(), getClass().getClassLoader()));
+
+        assertEquals(Set.of(LibraryTheme.class.getName(), LibraryDefaults.class.getName()), classes);
+    }
+
+    @Test
+    void classNames() {
+        assertEquals("com/example/Palette", DesktopStaticInitializerScanner.className("com/example/Palette.class"));
+        assertEquals("com/example/Palette$1", DesktopStaticInitializerScanner.className("com/example/Palette$1.class"));
+        // multi-release jars : the class that a versioned class file versions
+        assertEquals("com/example/Palette",
+                DesktopStaticInitializerScanner.className("META-INF/versions/17/com/example/Palette.class"));
+        assertEquals("Palette", DesktopStaticInitializerScanner.className("Palette.class"));
+        for (String other : List.of("module-info.class", "META-INF/versions/9/module-info.class",
+                "com/example/package-info.class", "META-INF/Other.class", "com/example/palette.properties")) {
+            assertNull(DesktopStaticInitializerScanner.className(other), other);
+        }
+    }
+
+    private Path jar(String name, Class<?>... classes) throws IOException {
+        Path jar = directory.resolve(name);
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar))) {
+            for (Class<?> type : classes) {
+                String entry = type.getName().replace('.', '/') + ".class";
+                out.putNextEntry(new JarEntry(entry));
+                try (InputStream in = type.getClassLoader().getResourceAsStream(entry)) {
+                    in.transferTo(out);
+                }
+                out.closeEntry();
+            }
+        }
+        return jar;
     }
 
     /**

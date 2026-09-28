@@ -33,9 +33,10 @@ macOS ones.
 * The JavaBeans API: property editors, `XMLEncoder` and `XMLDecoder`, `EventHandler`, and the bean properties of the
 AWT classes (see <<java-beans>>).
 * On macOS: the first thread of the process runs the Cocoa event loop, as with the `java` launcher (see <<macos>>).
-* Run time initialization of the JDK desktop packages, and of the *application classes whose static initializer uses
-them*: a class with a `static final Color ACCENT = new Color(0x0096c9)` (or a `Font`, an icon, a border...) is
-initialized at run time, as in JVM mode, instead of failing the native build.
+* Run time initialization of the JDK desktop packages, and of the *classes whose static initializer uses them*, in the
+application and in its libraries (whether they are in the Jandex index or not): a class with a
+`static final Color ACCENT = new Color(0x0096c9)` (or a `Font`, an icon, a border...) is initialized at run time, as in
+JVM mode, instead of failing the native build.
 * The system properties that the `java` launcher sets and a native executable does not have (`sun.java2d.dpiaware` on
 Windows, `apple.awt.application.name` on macOS, `sun.io.unicode.encoding`), and a `java.home` directory with the files
 of the JDK that AWT reads there (the font configuration of the JDK on Windows, the Metal shaders of Java2D on macOS).

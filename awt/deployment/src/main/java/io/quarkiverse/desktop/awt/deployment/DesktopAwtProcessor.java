@@ -35,6 +35,7 @@ import io.quarkiverse.desktop.awt.runtime.macos.ParkMainThreadEnabled;
 import io.quarkus.arc.deployment.BeanDiscoveryFinishedBuildItem;
 import io.quarkus.arc.deployment.ValidationPhaseBuildItem.ValidationErrorBuildItem;
 import io.quarkus.arc.processor.BeanInfo;
+import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.builder.Json;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.IsNormal;
@@ -76,6 +77,7 @@ import io.quarkus.deployment.pkg.steps.NativeBuild;
 import io.quarkus.deployment.pkg.steps.NativeOrNativeSourcesBuild;
 import io.quarkus.maven.dependency.ArtifactKey;
 import io.quarkus.maven.dependency.ResolvedDependency;
+import io.quarkus.paths.PathTree;
 import io.quarkus.runtime.LocalesBuildTimeConfig;
 import io.smallrye.common.os.OS;
 
@@ -339,15 +341,41 @@ class DesktopAwtProcessor {
         }
     }
 
+    /**
+     * The classes of the application and of its libraries (indexed or not) whose static initializer uses the desktop
+     * modules : initialized at run time, as in JVM mode (see {@link DesktopStaticInitializerScanner}).
+     */
     @BuildStep(onlyIf = NativeOrNativeSourcesBuild.class)
-    void runtimeInitializedDesktopUsers(CombinedIndexBuildItem combinedIndex,
+    void runtimeInitializedDesktopUsers(CombinedIndexBuildItem combinedIndex, CurateOutcomeBuildItem curateOutcome,
             BuildProducer<RuntimeInitializedClassBuildItem> classes) {
-        Set<String> users = DesktopStaticInitializerScanner.scan(combinedIndex.getIndex().getKnownClasses(),
-                Thread.currentThread().getContextClassLoader());
-        LOGGER.debugf("Classes using the desktop modules in their static initializer, initialized at run time : %s", users);
+        long start = System.nanoTime();
+        Set<String> users = DesktopStaticInitializerScanner.scan(DesktopStaticInitializerScanner.classFiles(
+                scannedTrees(curateOutcome.getApplicationModel()), combinedIndex.getIndex().getKnownClasses(),
+                Thread.currentThread().getContextClassLoader()));
+        LOGGER.debugf("Classes using the desktop modules in their static initializer, initialized at run time (%d ms) : %s",
+                (System.nanoTime() - start) / 1_000_000, users);
         for (String className : users) {
             classes.produce(new RuntimeInitializedClassBuildItem(className));
         }
+    }
+
+    /**
+     * The application and the libraries whose static initializers are scanned : not Quarkus itself nor the runtime
+     * artifacts of the extensions, which initialize their classes as they need.
+     */
+    static List<PathTree> scannedTrees(ApplicationModel model) {
+        List<PathTree> trees = new ArrayList<>();
+        trees.add(model.getAppArtifact().getContentTree());
+        for (ResolvedDependency dependency : model.getRuntimeDependencies()) {
+            if (!dependency.isRuntimeExtensionArtifact() && !isQuarkus(dependency.getGroupId())) {
+                trees.add(dependency.getContentTree());
+            }
+        }
+        return trees;
+    }
+
+    private static boolean isQuarkus(String groupId) {
+        return groupId.equals(QUARKUS_AWT_GROUP_ID) || groupId.startsWith(QUARKUS_AWT_GROUP_ID + ".");
     }
 
     // ------------------------------------------------------------------------------------------------------ reflection
