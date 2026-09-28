@@ -66,13 +66,21 @@ implementation("io.quarkiverse.desktop:quarkus-desktop-swing:{project-version}")
 |Yes: a native build on Windows, with Visual Studio (the {cpp} build tools). The executable is DPI aware, has the
 visual styles of Windows, can be a GUI application without console, and comes with the JDK libraries and the Visual
 {cpp} runtime it needs (see xref:awt.adoc#windows[Windows]). Verified with the showcase (see <<verification>>): every
-page renders the same pixels and gives the same checks as in JVM mode, with the Direct3D, GDI and OpenGL pipelines, at
-100 % and 150 % scale.
+page renders the same pixels and gives the same checks as in JVM mode, with the Direct3D, GDI and OpenGL pipelines at
+100 % scale, and at 150 % with GDI (with Direct3D at a fractional scale, a few edge pixels of the Metal gradients vary
+from one run to the next, in JVM mode too: see the
+https://github.com/Eng-Fouad/quarkus-desktop-showcase#compare-jvm-and-native-rendering[showcase README]).
 
-|Linux x64
+|Windows arm64
+|Yes
+|No: GraalVM has no native image builder for Windows on arm64. JVM mode is verified by the continuous integration of
+the showcase (two JVM runs compared).
+
+|Linux x64 and arm64
 |Yes
 |Yes: a native build on Linux or in a container. The executable uses the X11 libraries of the system (XWayland on
 Wayland), GTK 3 for the GTK look and feel and the native dialogs, CUPS and ALSA (see xref:awt.adoc#linux[Linux]).
+Verified on both architectures by the continuous integration of the showcase (native builds and runs).
 
 |macOS (Apple silicon)
 |Yes

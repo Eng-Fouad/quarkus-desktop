@@ -9,9 +9,10 @@
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 Quarkus extensions to build AWT and Swing desktop (GUI) applications, in JVM mode and as GraalVM native executables
-(Windows x64, Linux x64, and macOS on Apple silicon). Native executables for macOS need the quarkus-awt of the Quarkus pull
-request [Enable quarkus-awt on macOS](https://github.com/quarkusio/quarkus/pull/56979) (not in a Quarkus release yet:
-build Quarkus from it) and GraalVM 25.1 or later.
+(Windows x64, Linux x64 and arm64, and macOS on Apple silicon; JVM mode only on Windows arm64). Native executables for
+macOS need the quarkus-awt of the Quarkus pull request
+[Enable quarkus-awt on macOS](https://github.com/quarkusio/quarkus/pull/56979) (not in a Quarkus release yet: build
+Quarkus from it) and GraalVM 25.1 or later.
 
 | Extension | Coordinates | Description |
 |---|---|---|
@@ -30,7 +31,8 @@ native executables.
 | Platform | JVM mode | Native executable |
 |---|---|---|
 | Windows x64 | yes | yes (native build on Windows with Visual Studio) |
-| Linux x64 | yes | yes (native build on Linux or in a container; X11 or XWayland at run time) |
+| Windows arm64 | yes | no (no GraalVM native image builder for Windows on arm64) |
+| Linux x64 and arm64 | yes | yes (native build on Linux or in a container; X11 or XWayland at run time) |
 | macOS on Apple silicon | yes | yes, with the quarkus-awt of the Quarkus pull request [Enable quarkus-awt on macOS](https://github.com/quarkusio/quarkus/pull/56979) and GraalVM 25.1 or later (verified on an Apple silicon Mac, see below) |
 
 ## Showcase
