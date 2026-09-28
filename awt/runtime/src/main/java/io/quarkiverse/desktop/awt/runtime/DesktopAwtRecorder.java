@@ -203,10 +203,15 @@ public class DesktopAwtRecorder {
 
     /**
      * Dispatches the events with the class loader of an application.
+     * <p>
+     * {@code EventQueue.pop()} removes the top queue of the chain, whatever queue it is called on : when another queue
+     * was pushed after this one (by the application, or by another application of the JVM that still runs, as in
+     * continuous testing), popping would remove that queue. This queue then only drops its class loader, and is removed
+     * by the removal of a later queue of the extension once it is back on top.
      */
     static final class ApplicationEventQueue extends EventQueue {
 
-        private final ClassLoader classLoader;
+        private volatile ClassLoader classLoader;
 
         ApplicationEventQueue(ClassLoader classLoader) {
             this.classLoader = classLoader;
@@ -214,22 +219,38 @@ public class DesktopAwtRecorder {
 
         @Override
         protected void dispatchEvent(AWTEvent event) {
+            ClassLoader loader = classLoader;
             Thread thread = Thread.currentThread();
-            if (thread.getContextClassLoader() != classLoader) {
-                thread.setContextClassLoader(classLoader);
+            if (loader != null && thread.getContextClassLoader() != loader) {
+                thread.setContextClassLoader(loader);
             }
             super.dispatchEvent(event);
         }
 
         /**
-         * Stops dispatching events : the pending events go to the previous event queue.
+         * Stops dispatching events with the class loader of the application (the pending events go to the previous
+         * event queue) : removes this queue when it is the top one, then the queues of stopped applications below it.
          */
         void remove() {
-            try {
-                pop();
-            } catch (EmptyStackException e) {
-                // already removed
+            classLoader = null;
+            EventQueue top = Toolkit.getDefaultToolkit().getSystemEventQueue();
+            while (top instanceof ApplicationEventQueue queue && queue.classLoader == null) {
+                try {
+                    queue.pop();
+                } catch (EmptyStackException e) {
+                    // already removed
+                    return;
+                }
+                EventQueue next = Toolkit.getDefaultToolkit().getSystemEventQueue();
+                if (next == top) {
+                    return;
+                }
+                top = next;
             }
+        }
+
+        boolean isRemoved() {
+            return classLoader == null;
         }
     }
 }
