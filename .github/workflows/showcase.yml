@@ -8,13 +8,15 @@ on:
   push:
     branches:
       - "main"
+    # the documentation cannot change the cycles (the Build workflow still builds it)
     paths-ignore:
       - '.gitignore'
       - 'CODEOWNERS'
       - 'LICENSE'
-      - '*.md'
-      - '*.adoc'
+      - '**/*.md'
+      - '**/*.adoc'
       - '*.txt'
+      - 'docs/**'
       - '.all-contributorsrc'
       - '.github/project.yml'
   pull_request:
