@@ -1,5 +1,9 @@
 # Quarkus Desktop
 
+> [!IMPORTANT]
+> This repository moved to **[quarkiverse/quarkus-desktop](https://github.com/quarkiverse/quarkus-desktop)**, the home of
+> the extension in the Quarkiverse. This copy is archived: open issues and pull requests there.
+
 [![Version](https://img.shields.io/maven-central/v/io.quarkiverse.desktop/quarkus-desktop-parent?logo=apache-maven&style=flat-square)](https://central.sonatype.com/artifact/io.quarkiverse.desktop/quarkus-desktop-parent)
 [![Build](https://github.com/quarkiverse/quarkus-desktop/actions/workflows/build.yml/badge.svg)](https://github.com/quarkiverse/quarkus-desktop/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
